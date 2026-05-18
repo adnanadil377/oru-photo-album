@@ -1,0 +1,247 @@
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { Check, RefreshCw } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ProgressBar } from "@/components/ProgressBar";
+import { UploadZone } from "@/components/UploadZone";
+import { ApiError, friendlyApiError, getEvent, type EventResponse, type UploadResponse } from "@/lib/api";
+import { type UploadItem, useUpload } from "@/hooks/useUpload";
+
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=1800&q=80";
+
+interface EventPageProps {
+  slug: string;
+}
+
+function stageLabel(item: UploadItem): string {
+  const labels: Record<UploadItem["stage"], string> = {
+    queued: "Queued",
+    compressing: "Compressing...",
+    requesting: "Preparing...",
+    uploading: "Uploading...",
+    completing: "Finishing...",
+    done: "Done",
+    error: "Needs attention",
+  };
+  return item.error ?? labels[item.stage];
+}
+
+function UploadCard({ item, onRetry }: { item: UploadItem; onRetry: (id: string) => void }) {
+  const isDone = item.stage === "done";
+  const isError = item.stage === "error";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="grid gap-4 rounded-[8px] border border-charcoal/10 bg-white/55 p-3 shadow-sm sm:grid-cols-[88px_1fr_auto]"
+    >
+      <img src={item.previewUrl} alt="" className="h-24 w-full rounded-[8px] object-cover sm:h-[88px] sm:w-[88px]" />
+      <div className="min-w-0 space-y-3">
+        <div>
+          <p className="truncate text-sm font-semibold text-charcoal">{item.fileName}</p>
+          <p className="mt-1 text-sm text-muted">{stageLabel(item)}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ProgressBar value={item.compressionProgress} label="Compression" />
+          <ProgressBar value={item.uploadProgress} label="Upload" />
+        </div>
+      </div>
+      <div className="flex items-center justify-end">
+        {isDone ? (
+          <motion.svg width="32" height="32" viewBox="0 0 32 32" aria-label="Upload complete">
+            <motion.circle
+              cx="16"
+              cy="16"
+              r="14"
+              fill="none"
+              stroke="#1C1917"
+              strokeWidth="2"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.45 }}
+            />
+            <motion.path
+              d="M9 16.5l4.2 4.2L23 11"
+              fill="none"
+              stroke="#1C1917"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2.4"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.35, delay: 0.2 }}
+            />
+          </motion.svg>
+        ) : null}
+        {isError ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => onRetry(item.id)}>
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            Retry
+          </Button>
+        ) : null}
+      </div>
+    </motion.div>
+  );
+}
+
+export function EventPage({ slug }: EventPageProps) {
+  const [event, setEvent] = useState<EventResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [acceptedPassword, setAcceptedPassword] = useState<string | undefined>();
+
+  const fetchEvent = useCallback(
+    async (password?: string) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await getEvent(slug, password);
+        setEvent(response);
+        setPasswordRequired(false);
+        setAcceptedPassword(password);
+      } catch (fetchError) {
+        if (fetchError instanceof ApiError && fetchError.status === 401) {
+          setPasswordRequired(true);
+          setError(friendlyApiError(fetchError));
+        } else {
+          setError(friendlyApiError(fetchError));
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [slug]
+  );
+
+  useEffect(() => {
+    void fetchEvent();
+  }, [fetchEvent]);
+
+  const handleCompletedUpload = useCallback((upload: UploadResponse) => {
+    setEvent((current) =>
+      current
+        ? {
+            ...current,
+            current_uploads: current.current_uploads + 1,
+            current_storage_bytes: current.current_storage_bytes + upload.file_size,
+          }
+        : current
+    );
+  }, []);
+
+  const { items, uploadFiles, retryUpload } = useUpload({
+    slug,
+    eventPassword: acceptedPassword,
+    onUploadComplete: handleCompletedUpload,
+  });
+
+  async function handlePasswordSubmit(submitEvent: FormEvent<HTMLFormElement>) {
+    submitEvent.preventDefault();
+    await fetchEvent(passwordInput);
+  }
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
+        <p className="font-serif text-4xl font-semibold text-charcoal">Preparing the album...</p>
+      </main>
+    );
+  }
+
+  if (passwordRequired && !event) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
+        <form onSubmit={handlePasswordSubmit} className="w-full max-w-sm space-y-4 text-center">
+          <p className="font-serif text-4xl font-semibold text-charcoal">A private album</p>
+          <div className="space-y-2 text-left">
+            <Label htmlFor="eventPassword">Password</Label>
+            <Input
+              id="eventPassword"
+              type="password"
+              value={passwordInput}
+              onChange={(event) => setPasswordInput(event.target.value)}
+              autoFocus
+              required
+            />
+          </div>
+          {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
+          <Button type="submit" className="w-full">
+            Continue
+          </Button>
+        </form>
+      </main>
+    );
+  }
+
+  if (!event) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-ivory px-6 text-center">
+        <div className="max-w-md">
+          <p className="font-serif text-4xl font-semibold text-charcoal">
+            {error === "This event has ended. Thank you for being part of this day."
+              ? "This event has ended. Thank you for being part of this day."
+              : "We could not find this event."}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  const coverImage = event.cover_image_url || FALLBACK_COVER;
+
+  return (
+    <main className="min-h-screen bg-ivory">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="relative flex min-h-[56vh] items-end overflow-hidden px-5 pb-10 pt-28 sm:px-8">
+          <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-charcoal/40" />
+          <div className="relative mx-auto w-full max-w-5xl">
+            <p className="text-sm font-semibold uppercase text-ivory/80">Memoire</p>
+            <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-ivory sm:text-7xl">
+              {event.title}
+            </h1>
+          </div>
+        </div>
+
+        <section className="mx-auto grid max-w-5xl gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-6">
+            <UploadZone onFilesSelected={uploadFiles} />
+            <p className="text-sm font-semibold text-muted">Share your best moments - up to 30 photos</p>
+            <div className="space-y-3">
+              {items.map((item) => (
+                <UploadCard key={item.id} item={item} onRetry={retryUpload} />
+              ))}
+            </div>
+          </div>
+
+          <aside className="self-start rounded-[8px] border border-charcoal/10 bg-white/60 p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-charcoal">
+              <Check className="h-4 w-4" aria-hidden="true" />
+              <span>
+                {event.current_uploads}/{event.max_uploads} photos collected
+              </span>
+            </div>
+            <a
+              href={`/e/${event.slug}/gallery`}
+              className="mt-5 inline-flex rounded-[8px] text-sm font-semibold text-charcoal underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-charcoal"
+            >
+              View the gallery →
+            </a>
+          </aside>
+        </section>
+      </motion.section>
+    </main>
+  );
+}
