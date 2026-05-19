@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,8 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
   const defaultExpiry = useMemo(() => toLocalDateTimeInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), []);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
-  const [slugTouched, setSlugTouched] = useState(false);
+  const [randomSuffix, setRandomSuffix] = useState("");
+  const [isCustomSlug, setIsCustomSlug] = useState(false);
   const [expiresAt, setExpiresAt] = useState(defaultExpiry);
   const [uploadLimit, setUploadLimit] = useState("500");
   const [password, setPassword] = useState("");
@@ -43,6 +44,32 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setTitle("");
+      setIsCustomSlug(false);
+      const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+      let res = "";
+      for (let i = 0; i < 4; i++) {
+        res += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      setRandomSuffix(res);
+      setSlug(`event-${res}`);
+      setCoverFile(null);
+      setCoverLink("");
+      setPassword("");
+      setStartTime("");
+      setError(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!isCustomSlug && randomSuffix) {
+      const base = slugify(title);
+      setSlug(base ? `${base}-${randomSuffix}` : `event-${randomSuffix}`);
+    }
+  }, [title, isCustomSlug, randomSuffix]);
 
   async function uploadCover(file: File, eventSlug: string, eventPassword?: string) {
     const guestSessionId = getGuestSessionId();
@@ -149,31 +176,51 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
             <Input
               id="title"
               value={title}
-              onChange={(event) => {
-                const nextTitle = event.target.value;
-                setTitle(nextTitle);
-                if (!slugTouched) {
-                  setSlug(slugify(nextTitle));
-                }
-              }}
+              onChange={(event) => setTitle(event.target.value)}
               placeholder="New Year's Eve Party"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slug">Custom link</Label>
-            <Input
-              id="slug"
-              value={slug}
-              onChange={(event) => {
-                setSlugTouched(true);
-                setSlug(slugify(event.target.value));
-              }}
-              placeholder="ava-noor"
-              required
-              pattern="[a-z0-9-]{1,60}"
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="slug">Event link</Label>
+              <label className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isCustomSlug}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsCustomSlug(checked);
+                    if (!checked) {
+                      const base = slugify(title);
+                      setSlug(base ? `${base}-${randomSuffix}` : `event-${randomSuffix}`);
+                    }
+                  }}
+                  className="rounded border-zinc-800 bg-zinc-950 text-primary focus:ring-0 focus:ring-offset-0 h-3 w-3"
+                />
+                Customize link
+              </label>
+            </div>
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-zinc-500 text-sm select-none font-mono">
+                /e/
+              </span>
+              <Input
+                id="slug"
+                value={slug}
+                disabled={!isCustomSlug}
+                onChange={(event) => {
+                  if (isCustomSlug) {
+                    setSlug(slugify(event.target.value));
+                  }
+                }}
+                className="pl-8 font-mono bg-zinc-950/50 disabled:opacity-70 disabled:cursor-not-allowed text-zinc-200"
+                placeholder="ava-noor"
+                required
+                pattern="[a-z0-9-]{1,60}"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
