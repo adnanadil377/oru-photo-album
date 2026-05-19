@@ -38,12 +38,12 @@ function UploadCard({ item, onRetry }: { item: UploadItem; onRetry: (id: string)
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="grid gap-4 rounded-[8px] border border-charcoal/10 bg-white/55 p-3 shadow-sm sm:grid-cols-[88px_1fr_auto]"
+      className="grid gap-4 rounded-2xl border border-white/10 bg-surfaceHighlight p-3 shadow-sm sm:grid-cols-[88px_1fr_auto]"
     >
-      <img src={item.previewUrl} alt="" className="h-24 w-full rounded-[8px] object-cover sm:h-[88px] sm:w-[88px]" />
+      <img src={item.previewUrl} alt="" className="h-24 w-full rounded-xl object-cover sm:h-[88px] sm:w-[88px]" />
       <div className="min-w-0 space-y-3">
         <div>
-          <p className="truncate text-sm font-semibold text-charcoal">{item.fileName}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{item.fileName}</p>
           <p className="mt-1 text-sm text-muted">{stageLabel(item)}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -59,7 +59,7 @@ function UploadCard({ item, onRetry }: { item: UploadItem; onRetry: (id: string)
               cy="16"
               r="14"
               fill="none"
-              stroke="#1C1917"
+              stroke="#FFFFFF"
               strokeWidth="2"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
@@ -68,7 +68,7 @@ function UploadCard({ item, onRetry }: { item: UploadItem; onRetry: (id: string)
             <motion.path
               d="M9 16.5l4.2 4.2L23 11"
               fill="none"
-              stroke="#1C1917"
+              stroke="#FFFFFF"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2.4"
@@ -150,20 +150,20 @@ export function EventPage({ slug }: EventPageProps) {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
-        <p className="font-serif text-4xl font-semibold text-charcoal">Preparing the album...</p>
+      <main className="flex min-h-screen items-center justify-center bg-background px-6">
+        <p className="font-serif text-4xl font-semibold text-foreground">Preparing the album...</p>
       </main>
     );
   }
 
   if (passwordRequired && !event) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
+      <main className="flex min-h-screen items-center justify-center bg-background px-6">
         <form
           onSubmit={handlePasswordSubmit}
-          className="w-full max-w-sm space-y-4 rounded-[8px] border border-ivory/65 bg-ivory/95 p-6 text-center shadow-soft backdrop-blur-sm"
+          className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-surfaceHighlight/50 p-6 text-center shadow-soft backdrop-blur-sm"
         >
-          <p className="font-serif text-4xl font-semibold text-charcoal">A private album</p>
+          <p className="font-serif text-4xl font-semibold text-foreground">A private album</p>
           <div className="space-y-2 text-left">
             <Label htmlFor="eventPassword">Password</Label>
             <Input
@@ -186,9 +186,9 @@ export function EventPage({ slug }: EventPageProps) {
 
   if (!event) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6 text-center">
+      <main className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md">
-          <p className="font-serif text-4xl font-semibold text-charcoal">
+          <p className="font-serif text-4xl font-semibold text-foreground">
             {error === "This event has ended. Thank you for being part of this day."
               ? "This event has ended. Thank you for being part of this day."
               : "We could not find this event."}
@@ -201,7 +201,7 @@ export function EventPage({ slug }: EventPageProps) {
   const coverImage = event.cover_image_url || FALLBACK_COVER;
 
   return (
-    <main className="min-h-screen bg-ivory">
+    <main className="min-h-screen bg-background">
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -209,10 +209,10 @@ export function EventPage({ slug }: EventPageProps) {
       >
         <div className="relative flex min-h-[56vh] items-end overflow-hidden px-5 pb-10 pt-28 sm:px-8">
           <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-charcoal/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background to-background/20" />
           <div className="relative mx-auto w-full max-w-5xl">
-            <p className="text-sm font-semibold uppercase text-ivory/80">Memoire</p>
-            <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-ivory sm:text-7xl">
+            <p className="text-sm font-semibold uppercase text-muted">Memoire</p>
+            <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-foreground sm:text-7xl">
               {event.title}
             </h1>
           </div>
@@ -229,8 +229,8 @@ export function EventPage({ slug }: EventPageProps) {
             </div>
           </div>
 
-          <aside className="self-start rounded-[8px] border border-charcoal/10 bg-white/60 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-charcoal">
+          <aside className="self-start rounded-2xl border border-white/10 bg-surfaceHighlight/50 p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Check className="h-4 w-4" aria-hidden="true" />
               <span>
                 {event.current_uploads}/{event.max_uploads} photos collected
@@ -238,7 +238,7 @@ export function EventPage({ slug }: EventPageProps) {
             </div>
             <a
               href={`/e/${event.slug}/gallery`}
-              className="mt-5 inline-flex rounded-[8px] text-sm font-semibold text-charcoal underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-charcoal"
+              className="mt-5 inline-flex rounded-md text-sm font-semibold text-foreground underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
             >
               View the gallery →
             </a>

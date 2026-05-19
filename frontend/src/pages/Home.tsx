@@ -64,27 +64,25 @@ export function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-ivory">
-      <section className="relative flex min-h-screen items-center overflow-hidden px-4 py-10 sm:px-6">
-        <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-charcoal/45" />
+    <main className="min-h-screen bg-background">
+      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="relative mx-auto w-full max-w-3xl text-center"
+          className="relative mx-auto w-full max-w-md text-left"
         >
-          <p className="text-sm font-semibold uppercase text-ivory/80">Memoire</p>
-          <h1 className="mt-4 font-serif text-5xl font-semibold leading-[1.02] text-ivory sm:text-7xl">
-            Your day, beautifully remembered.
+          <p className="text-xs font-semibold tracking-wider uppercase text-muted">Create Your Film</p>
+          <h1 className="mt-4 font-serif text-5xl font-semibold leading-tight text-foreground sm:text-6xl">
+            Name your film.<br />Start capturing.
           </h1>
 
           <form
             onSubmit={handleSubmit}
-            className="mx-auto mt-8 grid max-w-2xl gap-4 rounded-[20px] border border-white/50 bg-white/70 p-4 text-left shadow-[0_8px_40px_rgba(0,0,0,0.18)] ring-1 ring-white/10 backdrop-blur-2xl backdrop-saturate-200 sm:grid-cols-2 sm:p-6"          
+            className="mt-10 flex flex-col gap-5"          
             >
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="title">Event title</Label>
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-foreground text-lg font-serif">What should we call this film?</Label>
               <Input
                 id="title"
                 value={title}
@@ -95,7 +93,7 @@ export function Home() {
                     setSlug(slugify(nextTitle));
                   }
                 }}
-                placeholder="Ava & Noor"
+                placeholder="New Year's Eve Party"
                 required
               />
             </div>
@@ -126,39 +124,43 @@ export function Home() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="uploadLimit">Upload limit</Label>
-              <Input
-                id="uploadLimit"
-                type="number"
-                min={1}
-                max={5000}
-                value={uploadLimit}
-                onChange={(event) => setUploadLimit(event.target.value)}
-              />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="uploadLimit">Upload limit</Label>
+                <Input
+                  id="uploadLimit"
+                  type="number"
+                  min={1}
+                  max={5000}
+                  value={uploadLimit}
+                  onChange={(event) => setUploadLimit(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Optional"
-              />
+            {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
+
+            <div className="mt-4 flex justify-end">
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+                {loading ? "Creating..." : "Next"}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
             </div>
-
-            {error ? <p className="text-sm font-semibold text-destructive sm:col-span-2">{error}</p> : null}
-
-            <Button type="submit" disabled={loading} className="sm:col-span-2">
-              {loading ? "Creating..." : "Create event"}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
           </form>
 
           {createdEvent ? (
-            <div className="mx-auto mt-5 max-w-2xl">
+            <div className="mt-8">
               <EventCard event={createdEvent} />
             </div>
           ) : null}

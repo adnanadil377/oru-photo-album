@@ -20,12 +20,12 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Erro
   render() {
     if (this.state.hasError) {
       return (
-        <main className="flex min-h-screen items-center justify-center bg-ivory px-6 text-center">
+        <main className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
           <div className="max-w-md">
-            <p className="font-serif text-4xl font-semibold text-charcoal">Something went quiet.</p>
-            <p className="mt-4 text-muted">Refresh the page and try again.</p>
-            <Button type="button" className="mt-6" onClick={() => window.location.reload()}>
-              Refresh
+            <p className="font-serif text-4xl font-semibold text-foreground">Something went quiet.</p>
+            <p className="mt-4 text-muted">We encountered an unexpected error displaying this page.</p>
+            <Button onClick={() => window.location.reload()} className="mt-8">
+              Refresh the page
             </Button>
           </div>
         </main>

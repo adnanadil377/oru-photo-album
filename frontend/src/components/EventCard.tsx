@@ -13,8 +13,8 @@ export function EventCard({ event }: EventCardProps) {
   }).format(new Date(event.expires_at));
 
   return (
-    <div className="rounded-[8px] border border-charcoal/10 bg-ivory p-4 text-left shadow-sm">
-      <p className="font-serif text-2xl font-semibold text-charcoal">{event.title}</p>
+    <div className="rounded-2xl border border-white/10 bg-surfaceHighlight p-5 text-left shadow-sm">
+      <p className="font-serif text-2xl font-semibold text-foreground">{event.title}</p>
       <div className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-2">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4" aria-hidden="true" />

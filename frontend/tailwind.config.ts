@@ -6,34 +6,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ivory: "#FDFAF6",
-        stone: "#C4B9A8",
-        charcoal: "#1C1917",
-        blush: "#E8C5B0",
-        muted: "#6B6560",
-        border: "#DED6CA",
-        background: "#FDFAF6",
-        foreground: "#1C1917",
+        background: "#000000",
+        foreground: "#FAFAFA",
+        muted: "#A0A0A0",
+        border: "#2C2C2E",
+        surface: "#111111",
+        surfaceHighlight: "#1C1C1E",
         primary: {
-          DEFAULT: "#1C1917",
-          foreground: "#FDFAF6",
+          DEFAULT: "#FFFFFF",
+          foreground: "#000000",
         },
         secondary: {
-          DEFAULT: "#E8C5B0",
-          foreground: "#1C1917",
+          DEFAULT: "#1C1C1E",
+          foreground: "#FFFFFF",
         },
         destructive: {
-          DEFAULT: "#8F3B2F",
-          foreground: "#FDFAF6",
+          DEFAULT: "#ef4444",
+          foreground: "#FFFFFF",
         },
-        ring: "#1C1917",
+        ring: "#FFFFFF",
       },
       fontFamily: {
         serif: ["Playfair Display", "Georgia", "serif"],
         sans: ["DM Sans", "Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 24px 70px rgba(28, 25, 23, 0.14)",
+        soft: "0 24px 70px rgba(0, 0, 0, 0.8)",
       },
     },
   },

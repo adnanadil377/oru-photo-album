@@ -93,20 +93,20 @@ export function GalleryPage({ slug }: GalleryPageProps) {
 
   if (loadingEvent) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
-        <p className="font-serif text-4xl font-semibold text-charcoal">Opening the gallery...</p>
+      <main className="flex min-h-screen items-center justify-center bg-background px-6">
+        <p className="font-serif text-4xl font-semibold text-foreground">Opening the gallery...</p>
       </main>
     );
   }
 
   if (passwordRequired && !event) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
+      <main className="flex min-h-screen items-center justify-center bg-background px-6">
         <form
           onSubmit={handlePasswordSubmit}
-          className="w-full max-w-sm space-y-4 rounded-[8px] border border-ivory/65 bg-ivory/95 p-6 text-center shadow-soft backdrop-blur-sm"
+          className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-surfaceHighlight/50 p-6 text-center shadow-soft backdrop-blur-sm"
         >
-          <p className="font-serif text-4xl font-semibold text-charcoal">A private gallery</p>
+          <p className="font-serif text-4xl font-semibold text-foreground">A private gallery</p>
           <div className="space-y-2 text-left">
             <Label htmlFor="galleryPassword">Password</Label>
             <Input
@@ -129,8 +129,8 @@ export function GalleryPage({ slug }: GalleryPageProps) {
 
   if (!event) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6 text-center">
-        <p className="max-w-md font-serif text-4xl font-semibold text-charcoal">
+      <main className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
+        <p className="max-w-md font-serif text-4xl font-semibold text-foreground">
           {eventError || "We could not find this event."}
         </p>
       </main>
@@ -140,7 +140,7 @@ export function GalleryPage({ slug }: GalleryPageProps) {
   const coverImage = event.cover_image_url || FALLBACK_COVER;
 
   return (
-    <main className="min-h-screen bg-ivory">
+    <main className="min-h-screen bg-background">
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -148,21 +148,21 @@ export function GalleryPage({ slug }: GalleryPageProps) {
       >
         <div className="relative flex min-h-[46vh] items-end overflow-hidden px-5 pb-10 pt-24 sm:px-8">
           <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-charcoal/45" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background to-background/20" />
           <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <a
                 href={`/e/${event.slug}`}
-                className="inline-flex rounded-[8px] text-sm font-semibold text-ivory/85 underline-offset-4 hover:text-ivory hover:underline focus:outline-none focus:ring-2 focus:ring-ivory"
+                className="inline-flex rounded-md text-sm font-semibold text-foreground/80 underline-offset-4 hover:text-foreground hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 Back to upload
               </a>
-              <p className="mt-10 text-sm font-semibold uppercase text-ivory/80">Memoire</p>
-              <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-ivory sm:text-7xl">
+              <p className="mt-10 text-sm font-semibold uppercase text-muted">Memoire</p>
+              <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-foreground sm:text-7xl">
                 {event.title}
               </h1>
             </div>
-            <p className="rounded-[8px] border border-ivory/30 bg-charcoal/20 px-4 py-2 text-sm font-semibold text-ivory backdrop-blur-sm">
+            <p className="rounded-2xl border border-white/10 bg-surfaceHighlight/50 px-4 py-2 text-sm font-semibold text-foreground backdrop-blur-sm">
               {event.current_uploads} photos
             </p>
           </div>
@@ -173,7 +173,7 @@ export function GalleryPage({ slug }: GalleryPageProps) {
           {loading && uploads.length === 0 ? <GallerySkeletons /> : null}
           {!loading && uploads.length === 0 && !error ? (
             <div className="py-24 text-center">
-              <p className="font-serif text-4xl font-semibold text-charcoal">
+              <p className="font-serif text-4xl font-semibold text-foreground">
                 No photos yet — be the first to share a moment
               </p>
             </div>

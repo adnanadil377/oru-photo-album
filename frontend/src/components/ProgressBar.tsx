@@ -16,14 +16,14 @@ export function ProgressBar({ value, label, className }: ProgressBarProps) {
         <span>{Math.round(boundedValue)}%</span>
       </div>
       <div
-        className="h-2 overflow-hidden rounded-full bg-stone/40"
+        className="h-2 overflow-hidden rounded-full bg-white/20"
         role="progressbar"
         aria-label={label}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(boundedValue)}
       >
-        <div className="h-full rounded-full bg-charcoal transition-all duration-300" style={{ width: `${boundedValue}%` }} />
+        <div className="h-full rounded-full bg-white transition-all duration-300" style={{ width: `${boundedValue}%` }} />
       </div>
     </div>
   );
