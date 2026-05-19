@@ -96,6 +96,7 @@ export function EventPage({ slug }: EventPageProps) {
   const [passwordRequired, setPasswordRequired] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [acceptedPassword, setAcceptedPassword] = useState<string | undefined>();
+  const [showThankYou, setShowThankYou] = useState(false);
 
   const fetchEvent = useCallback(
     async (password?: string) => {
@@ -143,6 +144,13 @@ export function EventPage({ slug }: EventPageProps) {
     onUploadComplete: handleCompletedUpload,
   });
 
+  useEffect(() => {
+    if (items.length > 0 && items.every((item) => item.stage === "done")) {
+      const timer = setTimeout(() => setShowThankYou(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [items]);
+
   async function handlePasswordSubmit(submitEvent: FormEvent<HTMLFormElement>) {
     submitEvent.preventDefault();
     await fetchEvent(passwordInput);
@@ -185,13 +193,14 @@ export function EventPage({ slug }: EventPageProps) {
   }
 
   if (!event) {
+    const isNotStarted = error === "This event hasn't started yet. Check back later!";
+    const isEnded = error === "This event has ended. Thank you for being part of this day.";
+    
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md">
           <p className="font-serif text-4xl font-semibold text-foreground">
-            {error === "This event has ended. Thank you for being part of this day."
-              ? "This event has ended. Thank you for being part of this day."
-              : "We could not find this event."}
+            {isNotStarted ? error : isEnded ? error : "We could not find this event."}
           </p>
         </div>
       </main>
@@ -199,6 +208,37 @@ export function EventPage({ slug }: EventPageProps) {
   }
 
   const coverImage = event.cover_image_url || FALLBACK_COVER;
+
+  if (showThankYou) {
+    return (
+      <main className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center p-6">
+        <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-30" />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-md" />
+        
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative max-w-md w-full rounded-3xl bg-surfaceHighlight/80 p-10 text-center shadow-2xl border border-white/10 backdrop-blur-xl"
+        >
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20 text-green-400 mb-6">
+            <Check className="h-10 w-10" />
+          </div>
+          <h2 className="font-serif text-4xl font-semibold text-foreground mb-4">Thank You!</h2>
+          <p className="text-muted text-lg mb-8">
+            Your photos have been added to the album. Thanks for sharing these memories!
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button asChild size="lg" className="w-full text-lg rounded-xl">
+              <a href={`/e/${event.slug}/gallery`}>View the Gallery</a>
+            </Button>
+            <Button variant="ghost" size="lg" onClick={() => setShowThankYou(false)} className="w-full text-lg rounded-xl">
+              Upload More
+            </Button>
+          </div>
+        </motion.div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background">

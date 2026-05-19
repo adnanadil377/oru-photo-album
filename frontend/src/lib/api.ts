@@ -7,6 +7,7 @@ export interface EventResponse {
   title: string;
   slug: string;
   expires_at: string;
+  start_time: string | null;
   created_at: string;
   cover_image_url: string | null;
   max_uploads: number;
@@ -21,8 +22,16 @@ export interface EventCreatePayload {
   title: string;
   slug: string;
   expires_at: string;
+  start_time?: string;
   max_uploads?: number;
   password?: string;
+}
+
+export interface EventUpdatePayload {
+  expires_at?: string;
+  start_time?: string;
+  max_uploads?: number;
+  cover_image_url?: string;
 }
 
 export interface UploadRequestPayload {
@@ -130,6 +139,20 @@ export function createEvent(payload: EventCreatePayload): Promise<EventResponse>
   return apiRequest<EventResponse>("/events", { method: "POST", body: payload });
 }
 
+export function updateEvent(slug: string, payload: EventUpdatePayload, eventPassword?: string): Promise<EventResponse> {
+  return apiRequest<EventResponse>(`/events/${encodeURIComponent(slug)}`, {
+    method: "PATCH",
+    body: payload,
+    eventPassword,
+  });
+}
+
+export function getEventsBatch(slugs: string[]): Promise<EventResponse[]> {
+  const query = slugs.map((s) => encodeURIComponent(s)).join(",");
+  if (!query) return Promise.resolve([]);
+  return apiRequest<EventResponse[]>(`/events/batch?slugs=${query}`);
+}
+
 export function getEvent(slug: string, password?: string): Promise<EventResponse> {
   const query = password ? `?password=${encodeURIComponent(password)}` : "";
   return apiRequest<EventResponse>(`/events/${encodeURIComponent(slug)}${query}`, {
@@ -188,6 +211,7 @@ export function friendlyApiError(error: unknown): string {
   const messages: Record<string, string> = {
     event_not_found: "We could not find this event.",
     event_expired: "This event has ended. Thank you for being part of this day.",
+    event_not_started: "This event hasn't started yet. Check back later!",
     wrong_password: "That password does not match this event.",
     password_required: "Enter the event password to continue.",
     file_type_not_allowed: "Only JPEG, PNG, HEIC, and WebP files are supported.",
