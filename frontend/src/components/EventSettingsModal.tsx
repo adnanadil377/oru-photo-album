@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateEvent, requestUpload, completeUpload, friendlyApiError, type EventResponse } from "@/lib/api";
-import { getGuestSessionId } from "@/lib/session";
+import { updateEvent, friendlyApiError, type EventResponse } from "@/lib/api";
+import { uploadFile } from "@/lib/uploader";
 
 function toLocalDateTimeInput(dateString: string | null | undefined): string {
   if (!dateString) return "";
@@ -35,40 +35,11 @@ export function EventSettingsModal({ open, onOpenChange, event, onUpdated }: Eve
   const [uploadingCover, setUploadingCover] = useState(false);
 
   async function uploadCover(file: File, eventSlug: string, eventPassword?: string) {
-    const guestSessionId = getGuestSessionId();
-    const requested = await requestUpload(
-      eventSlug,
-      {
-        guest_session_id: guestSessionId,
-        file_name: file.name,
-        mime_type: file.type,
-        file_size: file.size,
-      },
-      eventPassword
-    );
-    
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", requested.signed_url);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error("Upload failed"));
-      };
-      xhr.onerror = () => reject(new Error("Network error"));
-      xhr.send(file);
+    const completed = await uploadFile(file, {
+      slug: eventSlug,
+      eventPassword,
+      compress: false,
     });
-
-    const completed = await completeUpload(
-      eventSlug,
-      {
-        upload_id: requested.upload_id,
-        guest_session_id: guestSessionId,
-        file_size: file.size,
-        compressed: false,
-      },
-      eventPassword
-    );
     
     return completed.file_url;
   }

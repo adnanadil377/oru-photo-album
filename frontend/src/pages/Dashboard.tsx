@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, QrCode, Settings, Image as ImageIcon, Copy, Check } from "lucide-react";
+import { Plus, QrCode, Settings, Image as ImageIcon, Copy, Check, Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { QRModal } from "@/components/QRModal";
 import { CreateEventModal } from "@/components/CreateEventModal";
-import { EventSettingsModal } from "@/components/EventSettingsModal";
-import { getMyEvents, type EventResponse } from "@/lib/api";
+import { getMyEvents, type EventResponse, getDownloadZipUrl } from "@/lib/api";
 
 const DEFAULT_COVER = "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=80";
 
@@ -151,6 +150,16 @@ export function Dashboard() {
                             onClick={() => setSelectedEventForSettings(event)}
                           >
                             <Settings className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            asChild
+                            className="rounded-full bg-black/40 text-white hover:bg-black/60"
+                          >
+                            <a href={getDownloadZipUrl(event.slug)} download>
+                              <Download className="h-4 w-4" />
+                            </a>
                           </Button>
                         </div>
                       </div>

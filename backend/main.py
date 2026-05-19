@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 
 from config import settings
 from database import init_db
-from middleware.rate_limit import limiter
+from middleware.rate_limit import limiter, RateLimitMiddleware
 from routes import events, uploads, auth, hosts
 
 
@@ -27,6 +27,8 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(RateLimitMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

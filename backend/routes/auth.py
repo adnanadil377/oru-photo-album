@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
 from database import get_session
-from middleware.rate_limit import limiter
 from models import Host, RefreshToken
 from schemas import HostCreate, HostResponse, LoginRequest, TokenResponse
 from services.auth import (
@@ -47,9 +46,7 @@ def clear_refresh_cookie(response: Response) -> None:
 
 
 @router.post("/register", response_model=TokenResponse)
-@limiter.limit("3/minute")
 async def register(
-    request: Request,
     payload: HostCreate,
     response: Response,
     session: AsyncSession = Depends(get_session),
@@ -87,9 +84,7 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("5/minute")
 async def login(
-    request: Request,
     payload: LoginRequest,
     response: Response,
     session: AsyncSession = Depends(get_session),
@@ -122,9 +117,7 @@ async def login(
 
 
 @router.post("/refresh")
-@limiter.limit("10/minute")
 async def refresh_token(
-    request: Request,
     response: Response,
     memoire_refresh: Annotated[str | None, Cookie()] = None,
     session: AsyncSession = Depends(get_session),

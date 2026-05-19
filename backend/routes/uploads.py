@@ -7,38 +7,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
-from middleware.rate_limit import limiter
 from models import Event, GuestSession, Upload, Host
 from schemas import CompleteUploadRequest, GalleryResponse, UploadRequest, UploadRequestResponse, UploadResponse
-from services.limits import ensure_complete_upload_allowed, ensure_event_active, ensure_request_upload_allowed
-from services.security import verify_password
+from services.limits import ensure_complete_upload_allowed, ensure_request_upload_allowed
 from services.auth import get_current_host
 from services.storage import R2StorageService, sanitize_filename
+from services.event_guard import get_verified_event
 
 
 router = APIRouter(prefix="/events/{slug}", tags=["uploads"])
 storage_service = R2StorageService()
-
-
-async def load_event(
-    session: AsyncSession,
-    slug: str,
-    password: str | None = None,
-    lock: bool = False,
-) -> Event:
-    statement = select(Event).where(Event.slug == slug)
-    if lock:
-        statement = statement.with_for_update()
-    result = await session.execute(statement)
-    event = result.scalar_one_or_none()
-    if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event_not_found")
-    ensure_event_active(event)
-    if event.password_hash and not password:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="password_required")
-    if event.password_hash and not verify_password(password, event.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="wrong_password")
-    return event
 
 
 async def get_or_create_guest_session(session: AsyncSession, event: Event, session_id: str, lock: bool = False) -> GuestSession:
@@ -80,7 +58,6 @@ def to_upload_response(upload: Upload) -> UploadResponse:
 
 
 @router.post("/request-upload", response_model=UploadRequestResponse)
-@limiter.limit("10/minute")
 async def request_upload(
     slug: str,
     payload: UploadRequest,
@@ -90,7 +67,7 @@ async def request_upload(
     session: AsyncSession = Depends(get_session),
 ) -> UploadRequestResponse:
     ensure_header_matches_body(x_session_id, payload.guest_session_id)
-    event = await load_event(session, slug, password=x_event_password)
+    event = await get_verified_event(session, slug, password=x_event_password)
     guest_session = await get_or_create_guest_session(session, event, payload.guest_session_id)
     ensure_request_upload_allowed(event, guest_session, payload.mime_type, payload.file_size)
 
@@ -115,7 +92,6 @@ async def request_upload(
 
 
 @router.post("/complete-upload", response_model=UploadResponse)
-@limiter.limit("10/minute")
 async def complete_upload(
     slug: str,
     payload: CompleteUploadRequest,
@@ -125,7 +101,7 @@ async def complete_upload(
     session: AsyncSession = Depends(get_session),
 ) -> UploadResponse:
     ensure_header_matches_body(x_session_id, payload.guest_session_id)
-    event = await load_event(session, slug, password=x_event_password, lock=True)
+    event = await get_verified_event(session, slug, password=x_event_password, lock=True)
     guest_session = await get_or_create_guest_session(session, event, payload.guest_session_id, lock=True)
 
     upload_result = await session.execute(
@@ -160,7 +136,6 @@ async def complete_upload(
 
 
 @router.get("/gallery", response_model=GalleryResponse)
-@limiter.limit("30/minute")
 async def get_gallery(
     slug: str,
     request: Request,
@@ -169,10 +144,7 @@ async def get_gallery(
     limit: int = Query(default=20, ge=1, le=60),
     session: AsyncSession = Depends(get_session),
 ) -> GalleryResponse:
-    result = await session.execute(select(Event).where(Event.slug == slug))
-    event = result.scalar_one_or_none()
-    if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event_not_found")
+    event = await get_verified_event(session, slug, active_only=False, check_password=False)
     if event.host_id != current_host.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this gallery")
 

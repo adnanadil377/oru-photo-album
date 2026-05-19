@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { PhotoGrid } from "@/components/PhotoGrid";
-import { ApiError, friendlyApiError, getEvent, type EventResponse } from "@/lib/api";
+import { ApiError, friendlyApiError, getEvent, getDownloadZipUrl, type EventResponse } from "@/lib/api";
 import { useGallery } from "@/hooks/useGallery";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -146,9 +147,23 @@ export function GalleryPage({ slug }: GalleryPageProps) {
                   {event.title}
                 </h1>
               </div>
-              <p className="rounded-2xl border border-white/10 bg-surfaceHighlight/50 px-4 py-2 text-sm font-semibold text-foreground backdrop-blur-sm">
-                {event.current_uploads} photos
-              </p>
+              <div className="flex flex-col items-end gap-3">
+                <p className="rounded-2xl border border-white/10 bg-surfaceHighlight/50 px-4 py-2 text-sm font-semibold text-foreground backdrop-blur-sm">
+                  {event.current_uploads} photos
+                </p>
+                {event.current_uploads > 0 && (
+                  <Button 
+                    variant="secondary" 
+                    asChild
+                    className="rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border-none"
+                  >
+                    <a href={getDownloadZipUrl(event.slug)} download>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Album
+                    </a>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 

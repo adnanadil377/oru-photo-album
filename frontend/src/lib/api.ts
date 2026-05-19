@@ -269,6 +269,10 @@ export function getGallery(
   });
 }
 
+export function getDownloadZipUrl(slug: string, part: number = 0): string {
+  return `${API_URL}/events/${encodeURIComponent(slug)}/download-zip?part=${part}`;
+}
+
 export function refreshAccessToken(): Promise<{ access_token: string }> {
   return apiRequest<{ access_token: string }>("/auth/refresh", { method: "POST", skipAuth: true });
 }
