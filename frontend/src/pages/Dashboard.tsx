@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { QRModal } from "@/components/QRModal";
 import { CreateEventModal } from "@/components/CreateEventModal";
-import { getMyEvents, type EventResponse, getDownloadZipUrl } from "@/lib/api";
+import { EventSettingsModal } from "@/components/EventSettingsModal";
+import { getMyEvents, type EventResponse, getDownloadZipUrl, getMe } from "@/lib/api";
+import { Link } from "@/components/Link";
 
 const DEFAULT_COVER = "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=80";
 
@@ -119,7 +121,7 @@ export function Dashboard() {
                           variant="secondary"
                           className="w-full rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border-none"
                         >
-                          <a href={`/e/${event.slug}/gallery`}>View Gallery</a>
+                          <Link href={`/e/${event.slug}/gallery`}>View Gallery</Link>
                         </Button>
 
                         <div className="flex gap-2">
@@ -154,12 +156,18 @@ export function Dashboard() {
                           <Button 
                             size="icon" 
                             variant="ghost" 
-                            asChild
-                            className="rounded-full bg-black/40 text-white hover:bg-black/60"
+                            className="rounded-full bg-black/40 text-white hover:bg-black/60 cursor-pointer"
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              try {
+                                await getMe();
+                                window.location.href = getDownloadZipUrl(event.slug);
+                              } catch (err) {
+                                console.error("Failed to download zip:", err);
+                              }
+                            }}
                           >
-                            <a href={getDownloadZipUrl(event.slug)} download>
-                              <Download className="h-4 w-4" />
-                            </a>
+                            <Download className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -174,7 +182,6 @@ export function Dashboard() {
         {/* Floating Action Button */}
         <div className="fixed bottom-8 left-0 right-0 flex justify-center pointer-events-none">
           <Button
-            size="lg"
             onClick={() => setCreateModalOpen(true)}
             className="pointer-events-auto shadow-2xl shadow-primary/20 rounded-full px-8 h-14"
           >
@@ -192,7 +199,7 @@ export function Dashboard() {
         {selectedEventForSettings ? (
           <EventSettingsModal
             open={!!selectedEventForSettings}
-            onOpenChange={(open) => !open && setSelectedEventForSettings(null)}
+            onOpenChange={(open: boolean) => !open && setSelectedEventForSettings(null)}
             event={selectedEventForSettings}
             onUpdated={handleEventUpdated}
           />

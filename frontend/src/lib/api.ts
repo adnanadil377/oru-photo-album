@@ -86,6 +86,7 @@ interface ApiRequestOptions {
   body?: unknown;
   eventPassword?: string;
   skipAuth?: boolean;
+  skipRefresh?: boolean;
 }
 
 export class ApiError extends Error {
@@ -158,7 +159,7 @@ async function doFetch(path: string, options: ApiRequestOptions): Promise<Respon
 async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   let response = await doFetch(path, options);
 
-  if (response.status === 401 && !options.skipAuth && path !== "/auth/refresh" && path !== "/auth/login") {
+  if (response.status === 401 && !options.skipAuth && !options.skipRefresh && path !== "/auth/refresh" && path !== "/auth/login") {
     if (isRefreshing) {
       try {
         const token = await new Promise<string>((resolve, reject) => {
@@ -223,6 +224,7 @@ export function getEvent(slug: string, password?: string): Promise<EventResponse
   const query = password ? `?password=${encodeURIComponent(password)}` : "";
   return apiRequest<EventResponse>(`/events/${encodeURIComponent(slug)}${query}`, {
     eventPassword: password,
+    skipRefresh: true,
   });
 }
 
@@ -239,6 +241,7 @@ export function requestUpload(
     method: "POST",
     body: payload,
     eventPassword,
+    skipRefresh: true,
   });
 }
 
@@ -251,6 +254,7 @@ export function completeUpload(
     method: "POST",
     body: payload,
     eventPassword,
+    skipRefresh: true,
   });
 }
 

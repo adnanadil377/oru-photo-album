@@ -101,10 +101,12 @@ async def update_event(
     slug: str,
     payload: EventUpdate,
     request: Request,
-    x_event_password: Annotated[str | None, Header(alias="X-Event-Password")] = None,
+    current_host: Annotated[Host, Depends(get_current_host)],
     session: AsyncSession = Depends(get_session),
 ) -> EventResponse:
-    event = await get_verified_event(session, slug, password=x_event_password, active_only=False)
+    event = await get_verified_event(session, slug, active_only=False, check_password=False)
+    if event.host_id != current_host.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this event")
 
     if payload.expires_at is not None:
         event.expires_at = payload.expires_at
@@ -161,9 +163,11 @@ async def download_zip(
         from services.storage import R2StorageService
         storage_service = R2StorageService()
         async with httpx.AsyncClient() as client:
-            for upload in uploads:
+            for idx, upload in enumerate(uploads):
+                global_idx = offset + idx
                 file_url = storage_service.get_public_url(upload.object_key)
-                filename = upload.object_key.split('/')[-1]
+                raw_filename = upload.object_key.split('/')[-1]
+                filename = f"{global_idx + 1:03d}_{raw_filename}"
                 
                 async def file_stream(url):
                     async with client.stream('GET', url) as response:

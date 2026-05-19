@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { QRModal } from "@/components/QRModal";
 import { CreateEventModal } from "@/components/CreateEventModal";
 import { EventSettingsModal } from "@/components/EventSettingsModal";
-import { getEventsBatch, type EventResponse, getDownloadZipUrl } from "@/lib/api";
+import { getEventsBatch, type EventResponse, getDownloadZipUrl, getMe } from "@/lib/api";
+import { Link } from "@/components/Link";
 
 const DEFAULT_COVER = "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=80";
 
@@ -47,7 +48,7 @@ export function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-background pb-24">
+    <main className="min-h-screen bg-background pb-24 max-w-5xl mx-auto">
       <header className="px-6 pt-12 pb-6">
         <p className="text-xs font-semibold tracking-wider uppercase text-muted">Ready to begin?</p>
         <h1 className="mt-2 font-serif text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
@@ -69,7 +70,7 @@ export function Home() {
           <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/30 py-16 text-center">
             <ImageIcon className="h-12 w-12 text-muted/50 mb-4" />
             <p className="text-muted">No albums yet</p>
-            <Button variant="link" onClick={() => setCreateModalOpen(true)} className="mt-2">
+            <Button variant="ghost" onClick={() => setCreateModalOpen(true)} className="mt-2 underline">
               Create your first one
             </Button>
           </div>
@@ -104,7 +105,7 @@ export function Home() {
 
                     <div className="flex items-center justify-between">
                       <Button asChild variant="secondary" className="rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border-none">
-                        <a href={`/e/${event.slug}/gallery`}>View Gallery</a>
+                         <Link href={`/e/${event.slug}/gallery`}>View Gallery</Link>
                       </Button>
                       
                       <div className="flex gap-2">
@@ -127,12 +128,18 @@ export function Home() {
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          asChild
-                          className="rounded-full bg-black/40 text-white hover:bg-black/60"
+                          className="rounded-full bg-black/40 text-white hover:bg-black/60 cursor-pointer"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            try {
+                              await getMe();
+                              window.location.href = getDownloadZipUrl(event.slug);
+                            } catch (err) {
+                              console.error("Failed to download zip:", err);
+                            }
+                          }}
                         >
-                          <a href={getDownloadZipUrl(event.slug)} download>
-                            <Download className="h-4 w-4" />
-                          </a>
+                          <Download className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -147,7 +154,6 @@ export function Home() {
       {/* Floating Action Button */}
       <div className="fixed bottom-8 left-0 right-0 flex justify-center pointer-events-none">
         <Button
-          size="lg"
           onClick={() => setCreateModalOpen(true)}
           className="pointer-events-auto shadow-2xl shadow-primary/20 rounded-full px-8 h-14"
         >

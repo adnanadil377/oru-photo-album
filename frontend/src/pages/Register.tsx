@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
+import { Link, navigate } from "@/components/Link";
 
 export function Register() {
   const { register } = useAuth();
@@ -43,7 +44,7 @@ export function Register() {
 
     try {
       await register({ email, password, display_name: displayName });
-      window.location.href = "/dashboard";
+      navigate("/dashboard");
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
@@ -139,9 +140,9 @@ export function Register() {
 
         <p className="mt-6 text-center text-sm text-muted">
           Already have an account?{" "}
-          <a href="/login" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+          <Link href="/login" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
             Sign in
-          </a>
+          </Link>
         </p>
       </motion.div>
     </main>

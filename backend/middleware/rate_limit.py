@@ -40,7 +40,7 @@ limiter = Limiter(key_func=session_or_ip_key)
 RATE_LIMIT_RULES = [
     ("POST", r"^/auth/register$", "3/minute"),
     ("POST", r"^/auth/login$", "5/minute"),
-    ("POST", r"^/auth/refresh$", "10/minute"),
+    ("POST", r"^/auth/refresh$", "20/minute"),
     ("POST", r"^/events$", "5/minute"),
     ("POST", r"^/events/[^/]+/request-upload$", "10/minute"),
     ("POST", r"^/events/[^/]+/complete-upload$", "10/minute"),

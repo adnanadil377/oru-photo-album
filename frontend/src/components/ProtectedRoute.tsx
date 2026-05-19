@@ -1,12 +1,13 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
+import { navigate } from "@/components/Link";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      navigate(`/login?next=${encodeURIComponent(window.location.pathname)}`);
     }
   }, [isLoading, isAuthenticated]);
 

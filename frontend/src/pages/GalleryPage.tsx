@@ -5,7 +5,8 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { PhotoGrid } from "@/components/PhotoGrid";
-import { ApiError, friendlyApiError, getEvent, getDownloadZipUrl, type EventResponse } from "@/lib/api";
+import { ApiError, friendlyApiError, getEvent, getDownloadZipUrl, getMe, type EventResponse } from "@/lib/api";
+import { Link } from "@/components/Link";
 import { useGallery } from "@/hooks/useGallery";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -102,7 +103,7 @@ export function GalleryPage({ slug }: GalleryPageProps) {
               Only the event host can view this gallery.
             </p>
             <Button asChild className="mt-6">
-              <a href="/dashboard">Back to dashboard</a>
+              <Link href="/dashboard">Back to dashboard</Link>
             </Button>
           </div>
         </main>
@@ -136,12 +137,12 @@ export function GalleryPage({ slug }: GalleryPageProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-background to-background/20" />
             <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <a
+                <Link
                   href={`/e/${event.slug}`}
                   className="inline-flex rounded-md text-sm font-semibold text-foreground/80 underline-offset-4 hover:text-foreground hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   Back to upload
-                </a>
+                </Link>
                 <p className="mt-10 text-sm font-semibold uppercase text-muted">Memoire</p>
                 <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-foreground sm:text-7xl">
                   {event.title}
@@ -151,16 +152,22 @@ export function GalleryPage({ slug }: GalleryPageProps) {
                 <p className="rounded-2xl border border-white/10 bg-surfaceHighlight/50 px-4 py-2 text-sm font-semibold text-foreground backdrop-blur-sm">
                   {event.current_uploads} photos
                 </p>
-                {event.current_uploads > 0 && (
+                 {event.current_uploads > 0 && (
                   <Button 
                     variant="secondary" 
-                    asChild
-                    className="rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border-none"
+                    className="rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border-none cursor-pointer"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      try {
+                        await getMe();
+                        window.location.href = getDownloadZipUrl(event.slug);
+                      } catch (err) {
+                        console.error("Failed to download zip:", err);
+                      }
+                    }}
                   >
-                    <a href={getDownloadZipUrl(event.slug)} download>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Album
-                    </a>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Album
                   </Button>
                 )}
               </div>

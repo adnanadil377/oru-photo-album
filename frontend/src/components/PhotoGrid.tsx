@@ -70,7 +70,7 @@ export function PhotoGrid({ uploads }: PhotoGridProps) {
     }
   }
 
-  const selectedPhoto = selectedIndex !== null ? uploads[selectedIndex] : null;
+  const selectedPhoto = selectedIndex !== null && selectedIndex < uploads.length ? uploads[selectedIndex] : null;
 
   return (
     <>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
+import { Link, navigate } from "@/components/Link";
 
 export function Login() {
   const { login } = useAuth();
@@ -23,7 +24,7 @@ export function Login() {
       await login({ email, password });
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next") || "/dashboard";
-      window.location.href = next;
+      navigate(next);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
@@ -90,9 +91,9 @@ export function Login() {
 
         <p className="mt-6 text-center text-sm text-muted">
           Don&apos;t have an account?{" "}
-          <a href="/register" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+          <Link href="/register" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
             Create one
-          </a>
+          </Link>
         </p>
       </motion.div>
     </main>

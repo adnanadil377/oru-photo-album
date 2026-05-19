@@ -9,6 +9,7 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Home } from "@/pages/Home";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
+import { Link, navigate } from "@/components/Link";
 
 type Route =
   | { name: "home" }
@@ -60,7 +61,7 @@ function NotFound() {
       <div className="max-w-md">
         <p className="font-serif text-5xl font-semibold text-foreground">This page is not part of the album.</p>
         <Button asChild className="mt-6">
-          <a href="/">Go home</a>
+          <Link href="/">Go home</Link>
         </Button>
       </div>
     </main>
@@ -70,21 +71,21 @@ function NotFound() {
 function HomeRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
+        navigate("/dashboard");
+      } else {
+        navigate("/login");
+      }
+    }
+  }, [isLoading, isAuthenticated]);
 
-  if (isAuthenticated) {
-    window.location.href = "/dashboard";
-    return null;
-  }
-
-  window.location.href = "/login";
-  return null;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+    </div>
+  );
 }
 
 export default function App() {
