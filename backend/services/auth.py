@@ -16,7 +16,7 @@ from models import Host
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def hash_password(plain: str) -> str:
@@ -63,11 +63,24 @@ def decode_access_token(token: str) -> dict:
 
 
 async def get_current_host(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
+    token: str | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> Host:
-    token = credentials.credentials
-    payload = decode_access_token(token)
+    token_str = None
+    if credentials:
+        token_str = credentials.credentials
+    elif token:
+        token_str = token
+
+    if not token_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload = decode_access_token(token_str)
     host_id_str = payload.get("sub")
     if host_id_str is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")

@@ -134,10 +134,13 @@ async def get_event_qr(
 async def download_zip(
     slug: str,
     request: Request,
+    current_host: Annotated[Host, Depends(get_current_host)],
     part: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
 ):
     event = await get_verified_event(session, slug, active_only=False, check_password=False)
+    if event.host_id != current_host.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this gallery")
     
     limit = 500
     offset = part * limit
