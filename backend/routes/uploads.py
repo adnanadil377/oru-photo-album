@@ -8,10 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
 from middleware.rate_limit import limiter
-from models import Event, GuestSession, Upload
+from models import Event, GuestSession, Upload, Host
 from schemas import CompleteUploadRequest, GalleryResponse, UploadRequest, UploadRequestResponse, UploadResponse
 from services.limits import ensure_complete_upload_allowed, ensure_event_active, ensure_request_upload_allowed
 from services.security import verify_password
+from services.auth import get_current_host
 from services.storage import R2StorageService, sanitize_filename
 
 
@@ -163,13 +164,18 @@ async def complete_upload(
 async def get_gallery(
     slug: str,
     request: Request,
+    current_host: Annotated[Host, Depends(get_current_host)],
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=60),
-    password: str | None = None,
-    x_event_password: Annotated[str | None, Header(alias="X-Event-Password")] = None,
     session: AsyncSession = Depends(get_session),
 ) -> GalleryResponse:
-    event = await load_event(session, slug, password=password or x_event_password)
+    result = await session.execute(select(Event).where(Event.slug == slug))
+    event = result.scalar_one_or_none()
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event_not_found")
+    if event.host_id != current_host.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this gallery")
+
     offset = (page - 1) * limit
 
     total_result = await session.execute(

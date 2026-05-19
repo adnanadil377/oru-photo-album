@@ -7,10 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import settings
 from database import get_session
 from middleware.rate_limit import limiter
-from models import Event
+from models import Event, Host
 from schemas import EventCreate, EventResponse, EventUpdate, QRResponse
 from services.limits import ensure_event_active
 from services.security import hash_password, verify_password
+from services.auth import get_current_host
 
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -35,6 +36,7 @@ def to_event_response(event: Event) -> EventResponse:
         current_storage_bytes=event.current_storage_bytes,
         requires_password=event.password_hash is not None,
         event_url=event_url(event.slug),
+        host_id=event.host_id,
     )
 
 
@@ -60,6 +62,7 @@ def require_event_password(event: Event, password: str | None) -> None:
 async def create_event(
     request: Request,
     payload: EventCreate,
+    current_host: Annotated[Host, Depends(get_current_host)],
     session: AsyncSession = Depends(get_session),
 ) -> EventResponse:
     existing_result = await session.execute(select(Event.id).where(Event.slug == payload.slug))
@@ -74,6 +77,7 @@ async def create_event(
         max_uploads=payload.max_uploads,
         cover_image_url=payload.cover_image_url,
         password_hash=hash_password(payload.password) if payload.password else None,
+        host_id=current_host.id,
     )
     session.add(event)
     await session.commit()

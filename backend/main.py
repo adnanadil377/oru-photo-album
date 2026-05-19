@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from config import settings
 from database import init_db
 from middleware.rate_limit import limiter
-from routes import events, uploads
+from routes import events, uploads, auth, hosts
 
 
 @asynccontextmanager
@@ -31,11 +31,13 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "X-Session-ID", "X-Event-Password"],
+    allow_headers=["Content-Type", "X-Session-ID", "X-Event-Password", "Authorization"],
 )
 
+app.include_router(auth.router)
+app.include_router(hosts.router)
 app.include_router(events.router)
 app.include_router(uploads.router)
 

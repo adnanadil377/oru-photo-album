@@ -1,4 +1,5 @@
 import { getGuestSessionId } from "@/lib/session";
+import { getAccessToken, setAccessToken, clearAccessToken } from "@/lib/auth";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
@@ -16,6 +17,7 @@ export interface EventResponse {
   current_storage_bytes: number;
   requires_password: boolean;
   event_url: string;
+  host_id: string;
 }
 
 export interface EventCreatePayload {
@@ -80,9 +82,10 @@ interface QRResponse {
 }
 
 interface ApiRequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH";
   body?: unknown;
   eventPassword?: string;
+  skipAuth?: boolean;
 }
 
 export class ApiError extends Error {
@@ -111,7 +114,21 @@ async function readError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, detail);
 }
 
-async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: any) => void }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token as string);
+    }
+  });
+  failedQueue = [];
+};
+
+async function doFetch(path: string, options: ApiRequestOptions): Promise<Response> {
   const headers = new Headers();
   headers.set("X-Session-ID", getGuestSessionId());
 
@@ -123,11 +140,59 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
     headers.set("X-Event-Password", options.eventPassword);
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  if (!options.skipAuth) {
+    const token = getAccessToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
+  return fetch(`${API_URL}${path}`, {
     method: options.method ?? "GET",
     headers,
+    credentials: "include",
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
+}
+
+async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  let response = await doFetch(path, options);
+
+  if (response.status === 401 && !options.skipAuth && path !== "/auth/refresh" && path !== "/auth/login") {
+    if (isRefreshing) {
+      try {
+        const token = await new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        });
+        response = await doFetch(path, options);
+      } catch (err) {
+        throw await readError(response);
+      }
+    } else {
+      isRefreshing = true;
+      try {
+        const refreshRes = await doFetch("/auth/refresh", { method: "POST", skipAuth: true });
+        if (!refreshRes.ok) {
+          throw new Error("Refresh failed");
+        }
+        const data = await refreshRes.json();
+        setAccessToken(data.access_token);
+        processQueue(null, data.access_token);
+        
+        // Retry original request
+        response = await doFetch(path, options);
+      } catch (err) {
+        processQueue(err, null);
+        clearAccessToken();
+        if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+          window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        }
+        throw await readError(response);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+  }
 
   if (!response.ok) {
     throw await readError(response);
@@ -202,6 +267,30 @@ export function getGallery(
   return apiRequest<GalleryResponse>(`/events/${encodeURIComponent(slug)}/gallery?${search.toString()}`, {
     eventPassword: password,
   });
+}
+
+export function refreshAccessToken(): Promise<{ access_token: string }> {
+  return apiRequest<{ access_token: string }>("/auth/refresh", { method: "POST", skipAuth: true });
+}
+
+export function login(payload: any): Promise<any> {
+  return apiRequest("/auth/login", { method: "POST", body: payload, skipAuth: true });
+}
+
+export function register(payload: any): Promise<any> {
+  return apiRequest("/auth/register", { method: "POST", body: payload, skipAuth: true });
+}
+
+export function logout(): Promise<any> {
+  return apiRequest("/auth/logout", { method: "POST", skipAuth: true });
+}
+
+export function getMe(): Promise<any> {
+  return apiRequest("/auth/me");
+}
+
+export function getMyEvents(): Promise<EventResponse[]> {
+  return apiRequest<EventResponse[]>("/hosts/me/events");
 }
 
 export function friendlyApiError(error: unknown): string {

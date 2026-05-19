@@ -2,7 +2,7 @@ import re
 import uuid
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, EmailStr
 
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9-]{1,60}$")
@@ -47,6 +47,32 @@ class EventCreate(BaseModel):
         return normalized
 
 
+class HostCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    display_name: str = Field(min_length=2, max_length=60)
+
+
+class HostResponse(BaseModel):
+    id: uuid.UUID
+    email: EmailStr
+    display_name: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    host: HostResponse
+
+
 class EventResponse(BaseModel):
     id: uuid.UUID
     title: str
@@ -61,6 +87,7 @@ class EventResponse(BaseModel):
     current_storage_bytes: int
     requires_password: bool
     event_url: str
+    host_id: uuid.UUID
 
     model_config = ConfigDict(from_attributes=True)
 
