@@ -228,10 +228,7 @@ export function EventPage({ slug }: EventPageProps) {
             Your photos have been added to the album. Thanks for sharing these memories!
           </p>
           <div className="flex flex-col gap-3">
-            <Button asChild size="lg" className="w-full text-lg rounded-xl">
-              <a href={`/e/${event.slug}/gallery`}>View the Gallery</a>
-            </Button>
-            <Button variant="ghost" size="lg" onClick={() => setShowThankYou(false)} className="w-full text-lg rounded-xl">
+            <Button variant="secondary" size="lg" onClick={() => setShowThankYou(false)} className="w-full text-lg rounded-xl">
               Upload More
             </Button>
           </div>
@@ -258,31 +255,23 @@ export function EventPage({ slug }: EventPageProps) {
           </div>
         </div>
 
-        <section className="mx-auto grid max-w-5xl gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-6">
-            <UploadZone onFilesSelected={uploadFiles} />
-            <p className="text-sm font-semibold text-muted">Share your best moments - up to 30 photos</p>
-            <div className="space-y-3">
-              {items.map((item) => (
-                <UploadCard key={item.id} item={item} onRetry={retryUpload} />
-              ))}
+        <section className="mx-auto max-w-2xl px-5 py-12 sm:px-8">
+          <div className="space-y-8">
+            <div className="text-center space-y-3">
+              <h2 className="font-serif text-3xl font-semibold text-foreground">Add to the memories</h2>
+              <p className="text-muted text-lg">Your photos help complete the story. We'd love to see this day through your eyes!</p>
+            </div>
+            
+            <div className="space-y-6">
+              <UploadZone onFilesSelected={uploadFiles} />
+              <p className="text-sm font-semibold text-muted text-center">Share your best moments - up to 30 photos</p>
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <UploadCard key={item.id} item={item} onRetry={retryUpload} />
+                ))}
+              </div>
             </div>
           </div>
-
-          <aside className="self-start rounded-2xl border border-white/10 bg-surfaceHighlight/50 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Check className="h-4 w-4" aria-hidden="true" />
-              <span>
-                {event.current_uploads}/{event.max_uploads} photos collected
-              </span>
-            </div>
-            <a
-              href={`/e/${event.slug}/gallery`}
-              className="mt-5 inline-flex rounded-md text-sm font-semibold text-foreground underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              View the gallery →
-            </a>
-          </aside>
         </section>
       </motion.section>
     </main>

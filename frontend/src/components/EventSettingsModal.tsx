@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateEvent, friendlyApiError, type EventResponse } from "@/lib/api";
+import { updateEvent, requestUpload, completeUpload, friendlyApiError, type EventResponse } from "@/lib/api";
+import { getGuestSessionId } from "@/lib/session";
 
 function toLocalDateTimeInput(dateString: string | null | undefined): string {
   if (!dateString) return "";
@@ -26,17 +27,59 @@ export function EventSettingsModal({ open, onOpenChange, event, onUpdated }: Eve
   const [expiresAt, setExpiresAt] = useState("");
   const [startTime, setStartTime] = useState("");
   const [uploadLimit, setUploadLimit] = useState("");
-  const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [coverLink, setCoverLink] = useState("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  async function uploadCover(file: File, eventSlug: string, eventPassword?: string) {
+    const guestSessionId = getGuestSessionId();
+    const requested = await requestUpload(
+      eventSlug,
+      {
+        guest_session_id: guestSessionId,
+        file_name: file.name,
+        mime_type: file.type,
+        file_size: file.size,
+      },
+      eventPassword
+    );
+    
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", requested.signed_url);
+      xhr.setRequestHeader("Content-Type", file.type);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error("Upload failed"));
+      };
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.send(file);
+    });
+
+    const completed = await completeUpload(
+      eventSlug,
+      {
+        upload_id: requested.upload_id,
+        guest_session_id: guestSessionId,
+        file_size: file.size,
+        compressed: false,
+      },
+      eventPassword
+    );
+    
+    return completed.file_url;
+  }
 
   useEffect(() => {
     if (open && event) {
       setExpiresAt(toLocalDateTimeInput(event.expires_at));
       setStartTime(toLocalDateTimeInput(event.start_time));
       setUploadLimit(String(event.max_uploads));
-      setCoverImageUrl(event.cover_image_url || "");
+      setCoverLink(event.cover_image_url || "");
+      setCoverFile(null);
       setError(null);
     }
   }, [open, event]);
@@ -47,20 +90,29 @@ export function EventSettingsModal({ open, onOpenChange, event, onUpdated }: Eve
     setError(null);
 
     try {
+      const password = localStorage.getItem(`event_password_${event.slug}`) || undefined;
+      
+      let finalCoverUrl = coverLink.trim() || undefined;
+      
+      if (coverFile) {
+        setUploadingCover(true);
+        finalCoverUrl = await uploadCover(coverFile, event.slug, password);
+        setUploadingCover(false);
+      }
+
       const payload = {
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
         start_time: startTime ? new Date(startTime).toISOString() : undefined,
         max_uploads: Number(uploadLimit) || undefined,
-        cover_image_url: coverImageUrl.trim() || undefined,
+        cover_image_url: finalCoverUrl,
       };
-      
-      const password = localStorage.getItem(`event_password_${event.slug}`) || undefined;
 
       const response = await updateEvent(event.slug, payload, password);
       onUpdated(response);
       onOpenChange(false);
     } catch (submitError) {
       setError(friendlyApiError(submitError));
+      setUploadingCover(false);
     } finally {
       setLoading(false);
     }
@@ -77,13 +129,23 @@ export function EventSettingsModal({ open, onOpenChange, event, onUpdated }: Eve
         </DialogHeader>
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <div className="space-y-2">
-            <Label htmlFor="coverImage">Cover Image URL (Optional)</Label>
-            <Input
-              id="coverImage"
-              value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-            />
+            <Label htmlFor="coverFile">Cover Image (Upload or Link)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="coverFile"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
+                className="flex-1"
+              />
+              <Input
+                placeholder="Or paste image URL"
+                value={coverLink}
+                onChange={(e) => setCoverLink(e.target.value)}
+                className="flex-1"
+                disabled={!!coverFile}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -123,9 +185,9 @@ export function EventSettingsModal({ open, onOpenChange, event, onUpdated }: Eve
           {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
 
           <div className="mt-4 flex justify-end">
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+            <Button type="submit" disabled={loading || uploadingCover} className="w-full sm:w-auto">
               <Save className="mr-2 h-4 w-4" aria-hidden="true" />
-              {loading ? "Saving..." : "Save Changes"}
+              {uploadingCover ? "Uploading Cover..." : loading ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

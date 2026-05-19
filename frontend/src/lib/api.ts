@@ -23,6 +23,7 @@ export interface EventCreatePayload {
   slug: string;
   expires_at: string;
   start_time?: string;
+  cover_image_url?: string;
   max_uploads?: number;
   password?: string;
 }

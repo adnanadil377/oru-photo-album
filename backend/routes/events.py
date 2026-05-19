@@ -38,12 +38,13 @@ def to_event_response(event: Event) -> EventResponse:
     )
 
 
-async def load_event(session: AsyncSession, slug: str) -> Event:
+async def load_event(session: AsyncSession, slug: str, active_only: bool = True) -> Event:
     result = await session.execute(select(Event).where(Event.slug == slug))
     event = result.scalar_one_or_none()
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event_not_found")
-    ensure_event_active(event)
+    if active_only:
+        ensure_event_active(event)
     return event
 
 
@@ -71,6 +72,7 @@ async def create_event(
         expires_at=payload.expires_at,
         start_time=payload.start_time,
         max_uploads=payload.max_uploads,
+        cover_image_url=payload.cover_image_url,
         password_hash=hash_password(payload.password) if payload.password else None,
     )
     session.add(event)
@@ -116,7 +118,7 @@ async def update_event(
     x_event_password: Annotated[str | None, Header(alias="X-Event-Password")] = None,
     session: AsyncSession = Depends(get_session),
 ) -> EventResponse:
-    event = await load_event(session, slug)
+    event = await load_event(session, slug, active_only=False)
     require_event_password(event, x_event_password)
 
     if payload.expires_at is not None:
@@ -139,5 +141,5 @@ async def get_event_qr(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> QRResponse:
-    event = await load_event(session, slug)
+    event = await load_event(session, slug, active_only=False)
     return QRResponse(url=event_url(event.slug))

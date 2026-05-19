@@ -21,6 +21,7 @@ class EventCreate(BaseModel):
     slug: str = Field(min_length=1, max_length=60)
     expires_at: datetime
     start_time: datetime | None = None
+    cover_image_url: str | None = None
     max_uploads: int = Field(default=500, ge=1, le=5000)
     password: str | None = Field(default=None, min_length=4, max_length=128)
 

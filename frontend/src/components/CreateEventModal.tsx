@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createEvent, friendlyApiError, type EventResponse } from "@/lib/api";
+import { createEvent, requestUpload, completeUpload, updateEvent, friendlyApiError, type EventResponse } from "@/lib/api";
+import { getGuestSessionId } from "@/lib/session";
 
 function toLocalDateTimeInput(date: Date): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -36,8 +37,52 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
   const [expiresAt, setExpiresAt] = useState(defaultExpiry);
   const [uploadLimit, setUploadLimit] = useState("500");
   const [password, setPassword] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [coverLink, setCoverLink] = useState("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  async function uploadCover(file: File, eventSlug: string, eventPassword?: string) {
+    const guestSessionId = getGuestSessionId();
+    const requested = await requestUpload(
+      eventSlug,
+      {
+        guest_session_id: guestSessionId,
+        file_name: file.name,
+        mime_type: file.type,
+        file_size: file.size,
+      },
+      eventPassword
+    );
+    
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", requested.signed_url);
+      xhr.setRequestHeader("Content-Type", file.type);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error("Upload failed"));
+      };
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.send(file);
+    });
+
+    const completed = await completeUpload(
+      eventSlug,
+      {
+        upload_id: requested.upload_id,
+        guest_session_id: guestSessionId,
+        file_size: file.size,
+        compressed: false,
+      },
+      eventPassword
+    );
+    
+    await updateEvent(eventSlug, { cover_image_url: completed.file_url }, eventPassword);
+    return completed.file_url;
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,10 +94,13 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
         title,
         slug,
         expires_at: new Date(expiresAt).toISOString(),
+        start_time: startTime ? new Date(startTime).toISOString() : undefined,
         max_uploads: Number(uploadLimit) || 500,
+        cover_image_url: coverLink.trim() || undefined,
         ...(password.trim() ? { password: password.trim() } : {}),
       };
-      const response = await createEvent(payload);
+      
+      let response = await createEvent(payload);
       
       // Save to localStorage so we know we created it
       const myEvents = JSON.parse(localStorage.getItem("my_events") || "[]");
@@ -62,6 +110,19 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
       }
       if (password.trim()) {
         localStorage.setItem(`event_password_${response.slug}`, password.trim());
+      }
+
+      if (coverFile) {
+        setUploadingCover(true);
+        try {
+          const finalUrl = await uploadCover(coverFile, response.slug, password.trim() || undefined);
+          response = { ...response, cover_image_url: finalUrl };
+        } catch (uploadError) {
+          console.error("Failed to upload cover", uploadError);
+          // We don't fail the whole creation if the cover upload fails
+        } finally {
+          setUploadingCover(false);
+        }
       }
       
       onCreated(response);
@@ -116,14 +177,46 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expiresAt">Expiry date</Label>
-            <Input
-              id="expiresAt"
-              type="datetime-local"
-              value={expiresAt}
-              onChange={(event) => setExpiresAt(event.target.value)}
-              required
-            />
+            <Label htmlFor="coverFile">Cover Image (Upload or Link)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="coverFile"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
+                className="flex-1"
+              />
+              <Input
+                placeholder="Or paste image URL"
+                value={coverLink}
+                onChange={(e) => setCoverLink(e.target.value)}
+                className="flex-1"
+                disabled={!!coverFile}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start time (Optional)</Label>
+              <Input
+                id="startTime"
+                type="datetime-local"
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expiresAt">Expiry date</Label>
+              <Input
+                id="expiresAt"
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(event) => setExpiresAt(event.target.value)}
+                required
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -154,8 +247,8 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
           {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
 
           <div className="mt-4 flex justify-end">
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-              {loading ? "Creating..." : "Create"}
+            <Button type="submit" disabled={loading || uploadingCover} className="w-full sm:w-auto">
+              {uploadingCover ? "Uploading Cover..." : loading ? "Creating..." : "Create"}
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
