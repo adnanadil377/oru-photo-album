@@ -81,8 +81,8 @@ export function Home() {
 
           <form
             onSubmit={handleSubmit}
-            className="mx-auto mt-8 grid max-w-2xl gap-4 rounded-[8px] border border-ivory/55 bg-ivory p-4 text-left shadow-soft sm:grid-cols-2 sm:p-6"
-          >
+            className="mx-auto mt-8 grid max-w-2xl gap-4 rounded-[20px] border border-white/50 bg-white/70 p-4 text-left shadow-[0_8px_40px_rgba(0,0,0,0.18)] ring-1 ring-white/10 backdrop-blur-2xl backdrop-saturate-200 sm:grid-cols-2 sm:p-6"          
+            >
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="title">Event title</Label>
               <Input

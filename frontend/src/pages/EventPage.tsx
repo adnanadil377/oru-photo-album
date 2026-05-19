@@ -159,7 +159,10 @@ export function EventPage({ slug }: EventPageProps) {
   if (passwordRequired && !event) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
-        <form onSubmit={handlePasswordSubmit} className="w-full max-w-sm space-y-4 text-center">
+        <form
+          onSubmit={handlePasswordSubmit}
+          className="w-full max-w-sm space-y-4 rounded-[8px] border border-ivory/65 bg-ivory/95 p-6 text-center shadow-soft backdrop-blur-sm"
+        >
           <p className="font-serif text-4xl font-semibold text-charcoal">A private album</p>
           <div className="space-y-2 text-left">
             <Label htmlFor="eventPassword">Password</Label>

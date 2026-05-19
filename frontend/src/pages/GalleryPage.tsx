@@ -12,6 +12,9 @@ interface GalleryPageProps {
   slug: string;
 }
 
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=1800&q=80";
+
 function GallerySkeletons() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -99,7 +102,10 @@ export function GalleryPage({ slug }: GalleryPageProps) {
   if (passwordRequired && !event) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
-        <form onSubmit={handlePasswordSubmit} className="w-full max-w-sm space-y-4 text-center">
+        <form
+          onSubmit={handlePasswordSubmit}
+          className="w-full max-w-sm space-y-4 rounded-[8px] border border-ivory/65 bg-ivory/95 p-6 text-center shadow-soft backdrop-blur-sm"
+        >
           <p className="font-serif text-4xl font-semibold text-charcoal">A private gallery</p>
           <div className="space-y-2 text-left">
             <Label htmlFor="galleryPassword">Password</Label>
@@ -131,31 +137,38 @@ export function GalleryPage({ slug }: GalleryPageProps) {
     );
   }
 
+  const coverImage = event.cover_image_url || FALLBACK_COVER;
+
   return (
     <main className="min-h-screen bg-ivory">
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14"
       >
-        <a
-          href={`/e/${event.slug}`}
-          className="inline-flex rounded-[8px] text-sm font-semibold text-muted underline-offset-4 hover:text-charcoal hover:underline focus:outline-none focus:ring-2 focus:ring-charcoal"
-        >
-          Back to upload
-        </a>
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase text-muted">Memoire</p>
-            <h1 className="mt-2 font-serif text-5xl font-semibold leading-tight text-charcoal sm:text-7xl">
-              {event.title}
-            </h1>
+        <div className="relative flex min-h-[46vh] items-end overflow-hidden px-5 pb-10 pt-24 sm:px-8">
+          <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-charcoal/45" />
+          <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <a
+                href={`/e/${event.slug}`}
+                className="inline-flex rounded-[8px] text-sm font-semibold text-ivory/85 underline-offset-4 hover:text-ivory hover:underline focus:outline-none focus:ring-2 focus:ring-ivory"
+              >
+                Back to upload
+              </a>
+              <p className="mt-10 text-sm font-semibold uppercase text-ivory/80">Memoire</p>
+              <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-ivory sm:text-7xl">
+                {event.title}
+              </h1>
+            </div>
+            <p className="rounded-[8px] border border-ivory/30 bg-charcoal/20 px-4 py-2 text-sm font-semibold text-ivory backdrop-blur-sm">
+              {event.current_uploads} photos
+            </p>
           </div>
-          <p className="text-sm font-semibold text-muted">{event.current_uploads} photos</p>
         </div>
 
-        <div className="mt-10">
+        <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
           {uploads.length > 0 ? <PhotoGrid uploads={uploads} /> : null}
           {loading && uploads.length === 0 ? <GallerySkeletons /> : null}
           {!loading && uploads.length === 0 && !error ? (
