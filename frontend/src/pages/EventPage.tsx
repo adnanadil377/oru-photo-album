@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, Heart, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -212,24 +212,36 @@ export function EventPage({ slug }: EventPageProps) {
   if (showThankYou) {
     return (
       <main className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center p-6">
-        <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-30" />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-md" />
+        <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+        <div className="absolute inset-0 bg-background/70 backdrop-blur-xl" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
         
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative max-w-md w-full rounded-3xl bg-surfaceHighlight/80 p-10 text-center shadow-2xl border border-white/10 backdrop-blur-xl"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative max-w-lg w-full rounded-[2rem] bg-surfaceHighlight/40 p-12 text-center shadow-2xl border border-white/5 backdrop-blur-2xl"
         >
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20 text-green-400 mb-6">
-            <Check className="h-10 w-10" />
-          </div>
-          <h2 className="font-serif text-4xl font-semibold text-foreground mb-4">Thank You!</h2>
-          <p className="text-muted text-lg mb-8">
-            Your photos have been added to the album. Thanks for sharing these memories!
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
+            className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white/5 text-foreground/80 mb-8 border border-white/10"
+          >
+            <Heart className="h-10 w-10 fill-foreground/20" strokeWidth={1.5} />
+          </motion.div>
+          <h2 className="font-serif text-5xl font-medium text-foreground mb-6 tracking-tight">Forever grateful.</h2>
+          <p className="text-foreground/70 text-lg leading-relaxed mb-10 font-light">
+            The moments you've shared today will become part of a story that lasts a lifetime. Thank you for capturing these memories.
           </p>
-          <div className="flex flex-col gap-3">
-            <Button variant="secondary" size="lg" onClick={() => setShowThankYou(false)} className="w-full text-lg rounded-xl">
-              Upload More
+          <div className="flex flex-col gap-3 max-w-xs mx-auto">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => setShowThankYou(false)} 
+              className="w-full text-base rounded-full h-14 bg-white/5 border-white/10 hover:bg-white/10 hover:text-foreground transition-all duration-300"
+            >
+              Share more moments
             </Button>
           </div>
         </motion.div>
