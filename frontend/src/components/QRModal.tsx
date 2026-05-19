@@ -36,11 +36,11 @@ export function QRModal({ open, onOpenChange, eventTitle, eventUrl }: QRModalPro
           <DialogDescription>Share this with your guests</DialogDescription>
         </DialogHeader>
 
-        <div className="mx-auto rounded-[8px] border border-charcoal/10 bg-ivory p-4">
-          <QRCodeSVG value={eventUrl} size={220} bgColor="#FDFAF6" fgColor="#1C1917" level="M" />
+        <div className="mx-auto rounded-2xl border border-white/10 bg-white p-4">
+          <QRCodeSVG value={eventUrl} size={220} bgColor="#FFFFFF" fgColor="#000000" level="M" />
         </div>
 
-        <div className="rounded-[8px] border border-charcoal/10 bg-white/55 p-3 text-sm text-muted">
+        <div className="rounded-2xl border border-white/10 bg-surfaceHighlight/50 p-3 text-sm text-muted">
           <p className="break-all">{eventUrl}</p>
         </div>
 

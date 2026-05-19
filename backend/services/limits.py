@@ -10,10 +10,16 @@ MAX_GUEST_UPLOADS = 30
 
 
 def ensure_event_active(event: Event) -> None:
-    if as_aware_utc(event.expires_at) <= datetime.now(UTC):
+    now = datetime.now(UTC)
+    if as_aware_utc(event.expires_at) <= now:
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
             detail="event_expired",
+        )
+    if event.start_time and as_aware_utc(event.start_time) > now:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="event_not_started",
         )
 
 

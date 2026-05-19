@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, Heart, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,12 +38,12 @@ function UploadCard({ item, onRetry }: { item: UploadItem; onRetry: (id: string)
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="grid gap-4 rounded-[8px] border border-charcoal/10 bg-white/55 p-3 shadow-sm sm:grid-cols-[88px_1fr_auto]"
+      className="grid gap-4 rounded-2xl border border-white/10 bg-surfaceHighlight p-3 shadow-sm sm:grid-cols-[88px_1fr_auto]"
     >
-      <img src={item.previewUrl} alt="" className="h-24 w-full rounded-[8px] object-cover sm:h-[88px] sm:w-[88px]" />
+      <img src={item.previewUrl} alt="" className="h-24 w-full rounded-xl object-cover sm:h-[88px] sm:w-[88px]" />
       <div className="min-w-0 space-y-3">
         <div>
-          <p className="truncate text-sm font-semibold text-charcoal">{item.fileName}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{item.fileName}</p>
           <p className="mt-1 text-sm text-muted">{stageLabel(item)}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -59,7 +59,7 @@ function UploadCard({ item, onRetry }: { item: UploadItem; onRetry: (id: string)
               cy="16"
               r="14"
               fill="none"
-              stroke="#1C1917"
+              stroke="#FFFFFF"
               strokeWidth="2"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
@@ -68,7 +68,7 @@ function UploadCard({ item, onRetry }: { item: UploadItem; onRetry: (id: string)
             <motion.path
               d="M9 16.5l4.2 4.2L23 11"
               fill="none"
-              stroke="#1C1917"
+              stroke="#FFFFFF"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2.4"
@@ -96,6 +96,7 @@ export function EventPage({ slug }: EventPageProps) {
   const [passwordRequired, setPasswordRequired] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [acceptedPassword, setAcceptedPassword] = useState<string | undefined>();
+  const [showThankYou, setShowThankYou] = useState(false);
 
   const fetchEvent = useCallback(
     async (password?: string) => {
@@ -143,6 +144,13 @@ export function EventPage({ slug }: EventPageProps) {
     onUploadComplete: handleCompletedUpload,
   });
 
+  useEffect(() => {
+    if (items.length > 0 && items.every((item) => item.stage === "done")) {
+      const timer = setTimeout(() => setShowThankYou(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [items]);
+
   async function handlePasswordSubmit(submitEvent: FormEvent<HTMLFormElement>) {
     submitEvent.preventDefault();
     await fetchEvent(passwordInput);
@@ -150,20 +158,20 @@ export function EventPage({ slug }: EventPageProps) {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
-        <p className="font-serif text-4xl font-semibold text-charcoal">Preparing the album...</p>
+      <main className="flex min-h-screen items-center justify-center bg-background px-6">
+        <p className="font-serif text-4xl font-semibold text-foreground">Preparing the album...</p>
       </main>
     );
   }
 
   if (passwordRequired && !event) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6">
+      <main className="flex min-h-screen items-center justify-center bg-background px-6">
         <form
           onSubmit={handlePasswordSubmit}
-          className="w-full max-w-sm space-y-4 rounded-[8px] border border-ivory/65 bg-ivory/95 p-6 text-center shadow-soft backdrop-blur-sm"
+          className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-surfaceHighlight/50 p-6 text-center shadow-soft backdrop-blur-sm"
         >
-          <p className="font-serif text-4xl font-semibold text-charcoal">A private album</p>
+          <p className="font-serif text-4xl font-semibold text-foreground">A private album</p>
           <div className="space-y-2 text-left">
             <Label htmlFor="eventPassword">Password</Label>
             <Input
@@ -185,13 +193,14 @@ export function EventPage({ slug }: EventPageProps) {
   }
 
   if (!event) {
+    const isNotStarted = error === "This event hasn't started yet. Check back later!";
+    const isEnded = error === "This event has ended. Thank you for being part of this day.";
+    
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ivory px-6 text-center">
+      <main className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md">
-          <p className="font-serif text-4xl font-semibold text-charcoal">
-            {error === "This event has ended. Thank you for being part of this day."
-              ? "This event has ended. Thank you for being part of this day."
-              : "We could not find this event."}
+          <p className="font-serif text-4xl font-semibold text-foreground">
+            {isNotStarted ? error : isEnded ? error : "We could not find this event."}
           </p>
         </div>
       </main>
@@ -200,8 +209,48 @@ export function EventPage({ slug }: EventPageProps) {
 
   const coverImage = event.cover_image_url || FALLBACK_COVER;
 
+  if (showThankYou) {
+    return (
+      <main className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center p-6">
+        <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+        <div className="absolute inset-0 bg-background/70 backdrop-blur-xl" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative max-w-lg w-full rounded-[2rem] bg-surfaceHighlight/40 p-12 text-center shadow-2xl border border-white/5 backdrop-blur-2xl"
+        >
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
+            className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white/5 text-foreground/80 mb-8 border border-white/10"
+          >
+            <Heart className="h-10 w-10 fill-foreground/20" strokeWidth={1.5} />
+          </motion.div>
+          <h2 className="font-serif text-5xl font-medium text-foreground mb-6 tracking-tight">Forever grateful.</h2>
+          <p className="text-foreground/70 text-lg leading-relaxed mb-10 font-light">
+            The moments you've shared today will become part of a story that lasts a lifetime. Thank you for capturing these memories.
+          </p>
+          <div className="flex flex-col gap-3 max-w-xs mx-auto">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => setShowThankYou(false)} 
+              className="w-full text-base rounded-full h-14 bg-white/5 border-white/10 hover:bg-white/10 hover:text-foreground transition-all duration-300"
+            >
+              Share more moments
+            </Button>
+          </div>
+        </motion.div>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-ivory">
+    <main className="min-h-screen bg-background">
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -209,40 +258,32 @@ export function EventPage({ slug }: EventPageProps) {
       >
         <div className="relative flex min-h-[56vh] items-end overflow-hidden px-5 pb-10 pt-28 sm:px-8">
           <img src={coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-charcoal/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background to-background/20" />
           <div className="relative mx-auto w-full max-w-5xl">
-            <p className="text-sm font-semibold uppercase text-ivory/80">Memoire</p>
-            <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-ivory sm:text-7xl">
+            <p className="text-sm font-semibold uppercase text-muted">Memoire</p>
+            <h1 className="mt-3 max-w-3xl font-serif text-5xl font-semibold leading-tight text-foreground sm:text-7xl">
               {event.title}
             </h1>
           </div>
         </div>
 
-        <section className="mx-auto grid max-w-5xl gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-6">
-            <UploadZone onFilesSelected={uploadFiles} />
-            <p className="text-sm font-semibold text-muted">Share your best moments - up to 30 photos</p>
-            <div className="space-y-3">
-              {items.map((item) => (
-                <UploadCard key={item.id} item={item} onRetry={retryUpload} />
-              ))}
+        <section className="mx-auto max-w-2xl px-5 py-12 sm:px-8">
+          <div className="space-y-8">
+            <div className="text-center space-y-3">
+              <h2 className="font-serif text-3xl font-semibold text-foreground">Add to the memories</h2>
+              <p className="text-muted text-lg">Your photos help complete the story. We'd love to see this day through your eyes!</p>
+            </div>
+            
+            <div className="space-y-6">
+              <UploadZone onFilesSelected={uploadFiles} />
+              <p className="text-sm font-semibold text-muted text-center">Share your best moments - up to 30 photos</p>
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <UploadCard key={item.id} item={item} onRetry={retryUpload} />
+                ))}
+              </div>
             </div>
           </div>
-
-          <aside className="self-start rounded-[8px] border border-charcoal/10 bg-white/60 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-charcoal">
-              <Check className="h-4 w-4" aria-hidden="true" />
-              <span>
-                {event.current_uploads}/{event.max_uploads} photos collected
-              </span>
-            </div>
-            <a
-              href={`/e/${event.slug}/gallery`}
-              className="mt-5 inline-flex rounded-[8px] text-sm font-semibold text-charcoal underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-charcoal"
-            >
-              View the gallery →
-            </a>
-          </aside>
         </section>
       </motion.section>
     </main>

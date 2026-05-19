@@ -20,6 +20,8 @@ class EventCreate(BaseModel):
     title: str = Field(min_length=1, max_length=140)
     slug: str = Field(min_length=1, max_length=60)
     expires_at: datetime
+    start_time: datetime | None = None
+    cover_image_url: str | None = None
     max_uploads: int = Field(default=500, ge=1, le=5000)
     password: str | None = Field(default=None, min_length=4, max_length=128)
 
@@ -50,6 +52,7 @@ class EventResponse(BaseModel):
     title: str
     slug: str
     expires_at: datetime
+    start_time: datetime | None
     created_at: datetime
     cover_image_url: str | None
     max_uploads: int
@@ -60,6 +63,23 @@ class EventResponse(BaseModel):
     event_url: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EventUpdate(BaseModel):
+    expires_at: datetime | None = None
+    start_time: datetime | None = None
+    max_uploads: int | None = Field(default=None, ge=1, le=5000)
+    cover_image_url: str | None = None
+    
+    @field_validator("expires_at")
+    @classmethod
+    def ensure_future_expiry(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return value
+        normalized = as_aware_utc(value)
+        if normalized <= datetime.now(UTC):
+            raise ValueError("Expiration date must be in the future")
+        return normalized
 
 
 class UploadRequest(BaseModel):

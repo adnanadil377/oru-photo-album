@@ -31,9 +31,9 @@ function parseRoute(pathname: string): Route {
 
 function NotFound() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-ivory px-6 text-center">
+    <main className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
       <div className="max-w-md">
-        <p className="font-serif text-5xl font-semibold text-charcoal">This page is not part of the album.</p>
+        <p className="font-serif text-5xl font-semibold text-foreground">This page is not part of the album.</p>
         <Button asChild className="mt-6">
           <a href="/">Create an event</a>
         </Button>

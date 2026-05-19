@@ -64,8 +64,8 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       className={cn(
-        "flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-stone bg-ivory/75 px-6 py-12 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-charcoal",
-        dragging && "border-blush bg-blush/10",
+        "flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/20 bg-surfaceHighlight/50 px-6 py-12 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
+        dragging && "border-white/50 bg-white/5",
         disabled && "cursor-not-allowed opacity-60"
       )}
     >
@@ -78,8 +78,8 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
         onChange={handleInputChange}
         disabled={disabled}
       />
-      <ImagePlus className="h-10 w-10 text-charcoal" aria-hidden="true" />
-      <p className="mt-5 font-serif text-3xl font-semibold text-charcoal">Drop your photos here</p>
+      <ImagePlus className="h-10 w-10 text-foreground" aria-hidden="true" />
+      <p className="mt-5 font-serif text-3xl font-semibold text-foreground">Drop your photos here</p>
       <p className="mt-2 text-sm text-muted">or tap to browse</p>
     </motion.div>
   );

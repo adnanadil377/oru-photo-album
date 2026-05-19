@@ -26,6 +26,7 @@ class Event(Base):
     max_storage_bytes: Mapped[int] = mapped_column(BigInteger, default=2 * 1024 * 1024 * 1024, nullable=False)
     current_storage_bytes: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     uploads: Mapped[list["Upload"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     guest_sessions: Mapped[list["GuestSession"]] = relationship(back_populates="event", cascade="all, delete-orphan")
