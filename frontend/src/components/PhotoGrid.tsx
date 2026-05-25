@@ -11,9 +11,9 @@ interface PhotoGridProps {
 }
 
 const masonryBreakpoints = {
-  default: 3,
-  1024: 2,
-  640: 1,
+  default: 5,
+  1024: 3,
+  640: 2,
 };
 
 export function PhotoGrid({ uploads }: PhotoGridProps) {
@@ -107,6 +107,11 @@ export function PhotoGrid({ uploads }: PhotoGridProps) {
                 />
               )}
               <span className="pointer-events-none absolute inset-0 bg-blush/0 transition group-hover:bg-blush/20" />
+              {upload.guest_name && (
+                <div className="pointer-events-none absolute bottom-3 left-3 right-3 w-fit max-w-[calc(100%-24px)] truncate rounded bg-black/50 px-2.5 py-1 text-xs font-medium text-white opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
+                  From: {upload.guest_name}
+                </div>
+              )}
             </motion.button>
           ))}
         </Masonry>
@@ -151,6 +156,13 @@ export function PhotoGrid({ uploads }: PhotoGridProps) {
                 <X className="h-5 w-5" />
               </Button>
             </div>
+
+            {/* Guest Name Overlay */}
+            {selectedPhoto.guest_name && (
+              <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
+                From: {selectedPhoto.guest_name}
+              </div>
+            )}
 
             {/* Navigation Arrows */}
             {uploads.length > 1 && (

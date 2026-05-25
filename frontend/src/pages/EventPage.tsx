@@ -96,6 +96,7 @@ export function EventPage({ slug }: EventPageProps) {
   const [passwordRequired, setPasswordRequired] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [acceptedPassword, setAcceptedPassword] = useState<string | undefined>();
+  const [guestName, setGuestName] = useState("");
   const [showThankYou, setShowThankYou] = useState(false);
 
   const fetchEvent = useCallback(
@@ -141,6 +142,7 @@ export function EventPage({ slug }: EventPageProps) {
   const { items, uploadFiles, retryUpload } = useUpload({
     slug,
     eventPassword: acceptedPassword,
+    guestName: guestName.trim() || undefined,
     onUploadComplete: handleCompletedUpload,
   });
 
@@ -274,6 +276,16 @@ export function EventPage({ slug }: EventPageProps) {
             </div>
             
             <div className="space-y-6">
+              <div className="mx-auto max-w-sm space-y-2">
+                <Label htmlFor="guestName" className="text-muted-foreground ml-1">Your Name (optional)</Label>
+                <Input 
+                  id="guestName" 
+                  placeholder="e.g. Sarah & Tom" 
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  className="bg-surfaceHighlight/50 border-white/10"
+                />
+              </div>
               <UploadZone onFilesSelected={uploadFiles} />
               <p className="text-sm font-semibold text-muted text-center">Share your best moments - up to 30 photos</p>
               <div className="space-y-3">

@@ -39,6 +39,7 @@ export interface EventUpdatePayload {
 
 export interface UploadRequestPayload {
   guest_session_id: string;
+  guest_name?: string;
   file_name: string;
   mime_type: string;
   file_size: number;
@@ -61,6 +62,7 @@ export interface CompleteUploadPayload {
 export interface UploadResponse {
   id: string;
   guest_session_id: string;
+  guest_name: string | null;
   file_url: string;
   object_key: string;
   compressed: boolean;

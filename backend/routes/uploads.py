@@ -49,6 +49,7 @@ def to_upload_response(upload: Upload) -> UploadResponse:
     return UploadResponse(
         id=upload.id,
         guest_session_id=upload.guest_session_id,
+        guest_name=upload.guest_name,
         file_url=upload.file_url,
         object_key=upload.object_key,
         compressed=upload.compressed,
@@ -83,6 +84,7 @@ async def request_upload(
         id=upload_id,
         event_id=event.id,
         guest_session_id=payload.guest_session_id,
+        guest_name=payload.guest_name,
         object_key=object_key,
         mime_type=payload.mime_type,
         media_type=media_type,

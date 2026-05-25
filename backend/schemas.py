@@ -114,6 +114,7 @@ class EventUpdate(BaseModel):
 
 class UploadRequest(BaseModel):
     guest_session_id: str
+    guest_name: str | None = Field(default=None, max_length=100)
     file_name: str = Field(min_length=1, max_length=255)
     mime_type: str
     file_size: int = Field(gt=0)
@@ -148,6 +149,7 @@ class CompleteUploadRequest(BaseModel):
 class UploadResponse(BaseModel):
     id: uuid.UUID
     guest_session_id: str
+    guest_name: str | None
     file_url: str
     object_key: str
     compressed: bool

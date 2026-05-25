@@ -9,6 +9,7 @@ const MAX_VIDEO_SIZE = 500 * 1024 * 1024;
 export interface UploadOptions {
   slug: string;
   eventPassword?: string;
+  guestName?: string;
   compress?: boolean;
   validate?: boolean;
   onStageChange?: (stage: "compressing" | "requesting" | "uploading" | "completing") => void;
@@ -57,6 +58,7 @@ export async function uploadFile(file: File, options: UploadOptions): Promise<Up
   const {
     slug,
     eventPassword,
+    guestName,
     compress = true,
     validate = true,
     onStageChange,
@@ -102,6 +104,7 @@ export async function uploadFile(file: File, options: UploadOptions): Promise<Up
     slug,
     {
       guest_session_id: guestSessionId,
+      guest_name: guestName,
       file_name: uploadFile.name,
       mime_type: uploadFile.type || file.type,
       file_size: uploadFile.size,

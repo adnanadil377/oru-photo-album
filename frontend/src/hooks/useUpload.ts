@@ -22,6 +22,7 @@ export interface UploadItem {
 interface UseUploadOptions {
   slug: string;
   eventPassword?: string;
+  guestName?: string;
   onUploadComplete?: (upload: UploadResponse) => void;
 }
 
@@ -39,7 +40,7 @@ async function runPool(items: UploadItem[], limit: number, worker: (item: Upload
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runWorker));
 }
 
-export function useUpload({ slug, eventPassword, onUploadComplete }: UseUploadOptions) {
+export function useUpload({ slug, eventPassword, guestName, onUploadComplete }: UseUploadOptions) {
   const [items, setItems] = useState<UploadItem[]>([]);
 
   const updateItem = useCallback((id: string, patch: Partial<UploadItem>) => {
@@ -54,6 +55,7 @@ export function useUpload({ slug, eventPassword, onUploadComplete }: UseUploadOp
         const completed = await uploadFile(item.file, {
           slug,
           eventPassword,
+          guestName,
           onStageChange: (stage) => {
             updateItem(item.id, { stage });
           },
@@ -79,7 +81,7 @@ export function useUpload({ slug, eventPassword, onUploadComplete }: UseUploadOp
         });
       }
     },
-    [eventPassword, onUploadComplete, slug, updateItem]
+    [eventPassword, guestName, onUploadComplete, slug, updateItem]
   );
 
   const uploadFiles = useCallback(

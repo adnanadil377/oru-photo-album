@@ -70,6 +70,7 @@ class Upload(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
     guest_session_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    guest_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     file_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     object_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     compressed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
