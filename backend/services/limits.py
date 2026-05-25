@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 
 from models import Event, GuestSession
-from schemas import ALLOWED_MIME_TYPES, MAX_FILE_SIZE, as_aware_utc
+from schemas import ALLOWED_MIME_TYPES, MAX_PHOTO_SIZE, MAX_VIDEO_SIZE, as_aware_utc
 
 
 MAX_GUEST_UPLOADS = 30
@@ -23,13 +23,14 @@ def ensure_event_active(event: Event) -> None:
         )
 
 
-def ensure_request_upload_allowed(event: Event, guest_session: GuestSession, mime_type: str, file_size: int) -> None:
+def ensure_request_upload_allowed(event: Event, guest_session: GuestSession, mime_type: str, media_type: str, file_size: int) -> None:
     ensure_event_active(event)
 
     if mime_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="file_type_not_allowed")
 
-    if file_size > MAX_FILE_SIZE:
+    max_size = MAX_VIDEO_SIZE if media_type == "video" else MAX_PHOTO_SIZE
+    if file_size > max_size:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="file_too_large")
 
     if guest_session.upload_count >= MAX_GUEST_UPLOADS:
@@ -42,10 +43,11 @@ def ensure_request_upload_allowed(event: Event, guest_session: GuestSession, mim
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="event_storage_cap_reached")
 
 
-def ensure_complete_upload_allowed(event: Event, guest_session: GuestSession, file_size: int) -> None:
+def ensure_complete_upload_allowed(event: Event, guest_session: GuestSession, media_type: str, file_size: int) -> None:
     ensure_event_active(event)
 
-    if file_size > MAX_FILE_SIZE:
+    max_size = MAX_VIDEO_SIZE if media_type == "video" else MAX_PHOTO_SIZE
+    if file_size > max_size:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="file_too_large")
 
     if guest_session.upload_count >= MAX_GUEST_UPLOADS:

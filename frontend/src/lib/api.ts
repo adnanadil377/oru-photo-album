@@ -65,6 +65,7 @@ export interface UploadResponse {
   object_key: string;
   compressed: boolean;
   mime_type: string;
+  media_type: "photo" | "video";
   file_size: number;
   created_at: string;
 }
@@ -262,11 +263,15 @@ export function getGallery(
   slug: string,
   page = 1,
   limit = 20,
-  password?: string
+  password?: string,
+  mediaType?: "all" | "photo" | "video"
 ): Promise<GalleryResponse> {
   const search = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (password) {
     search.set("password", password);
+  }
+  if (mediaType && mediaType !== "all") {
+    search.set("media_type", mediaType);
   }
   return apiRequest<GalleryResponse>(`/events/${encodeURIComponent(slug)}/gallery?${search.toString()}`, {
     eventPassword: password,
@@ -314,8 +319,8 @@ export function friendlyApiError(error: unknown): string {
     event_not_started: "This event hasn't started yet. Check back later!",
     wrong_password: "That password does not match this event.",
     password_required: "Enter the event password to continue.",
-    file_type_not_allowed: "Only JPEG, PNG, HEIC, and WebP files are supported.",
-    file_too_large: "Please upload photos under 20MB.",
+    file_type_not_allowed: "Only JPEG, PNG, HEIC, WebP, and common video files are supported.",
+    file_too_large: "Please upload photos under 20MB and videos under 500MB.",
     guest_upload_limit_reached: "You've shared 30 photos - thank you!",
     event_upload_cap_reached: "This event's photo limit has been reached.",
     event_storage_cap_reached: "This event's storage limit has been reached.",

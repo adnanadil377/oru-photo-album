@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import Masonry from "react-masonry-css";
-import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Download, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -85,12 +85,27 @@ export function PhotoGrid({ uploads }: PhotoGridProps) {
               onClick={() => setSelectedIndex(index)}
               aria-label="Open photo"
             >
-              <img
-                src={upload.file_url}
-                alt="Guest upload"
-                loading="lazy"
-                className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-              />
+              {upload.media_type === "video" ? (
+                <>
+                  <video
+                    src={upload.file_url}
+                    preload="metadata"
+                    className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="rounded-full bg-black/40 p-3 text-white backdrop-blur-sm transition group-hover:bg-black/60 group-hover:scale-110">
+                      <Play className="h-8 w-8 fill-current" />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <img
+                  src={upload.file_url}
+                  alt="Guest upload"
+                  loading="lazy"
+                  className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                />
+              )}
               <span className="pointer-events-none absolute inset-0 bg-blush/0 transition group-hover:bg-blush/20" />
             </motion.button>
           ))}
@@ -173,12 +188,23 @@ export function PhotoGrid({ uploads }: PhotoGridProps) {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="relative flex h-full w-full items-center justify-center p-8"
             >
-              <img
-                src={selectedPhoto.file_url}
-                alt="Guest upload enlarged"
-                className="max-h-full max-w-full rounded-[12px] object-contain shadow-soft"
-                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
-              />
+              {selectedPhoto.media_type === "video" ? (
+                <video
+                  src={selectedPhoto.file_url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-full max-w-full rounded-[12px] object-contain shadow-soft bg-black/20"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <img
+                  src={selectedPhoto.file_url}
+                  alt="Guest upload enlarged"
+                  className="max-h-full max-w-full rounded-[12px] object-contain shadow-soft"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
             </motion.div>
           </motion.div>
         )}

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,19 @@ import { ApiError } from "@/lib/api";
 import { Link, navigate } from "@/components/Link";
 
 export function Register() {
-  const { register } = useAuth();
+  const { register, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthLoading, isAuthenticated]);
 
   function validate(): string | null {
     if (password.length < 8) {

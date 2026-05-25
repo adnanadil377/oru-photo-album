@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { friendlyApiError, getGallery, type UploadResponse } from "@/lib/api";
 
-export function useGallery(slug: string, password?: string, enabled = true) {
+export function useGallery(slug: string, password?: string, mediaType: "all" | "photo" | "video" = "all", enabled = true) {
   const [uploads, setUploads] = useState<UploadResponse[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -21,7 +21,7 @@ export function useGallery(slug: string, password?: string, enabled = true) {
       setError(null);
 
       try {
-        const response = await getGallery(slug, pageToLoad, 20, password);
+        const response = await getGallery(slug, pageToLoad, 20, password, mediaType);
         setUploads((current) => (replace ? response.uploads : [...current, ...response.uploads]));
         setPage(response.page);
         setHasMore(response.has_more);
@@ -32,7 +32,7 @@ export function useGallery(slug: string, password?: string, enabled = true) {
         setLoading(false);
       }
     },
-    [enabled, password, slug]
+    [enabled, password, slug, mediaType]
   );
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function useGallery(slug: string, password?: string, enabled = true) {
     }
 
     void fetchPage(1, true);
-  }, [enabled, fetchPage]);
+  }, [enabled, fetchPage, mediaType]);
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {

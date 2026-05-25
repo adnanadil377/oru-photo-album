@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +53,7 @@ def to_upload_response(upload: Upload) -> UploadResponse:
         object_key=upload.object_key,
         compressed=upload.compressed,
         mime_type=upload.mime_type,
+        media_type=upload.media_type,
         file_size=upload.file_size,
         created_at=upload.created_at,
     )
@@ -69,17 +71,21 @@ async def request_upload(
     ensure_header_matches_body(x_session_id, payload.guest_session_id)
     event = await get_verified_event(session, slug, password=x_event_password)
     guest_session = await get_or_create_guest_session(session, event, payload.guest_session_id)
-    ensure_request_upload_allowed(event, guest_session, payload.mime_type, payload.file_size)
+    
+    media_type = "video" if payload.mime_type.startswith("video/") else "photo"
+    ensure_request_upload_allowed(event, guest_session, payload.mime_type, media_type, payload.file_size)
 
     upload_id = uuid.uuid4()
     safe_filename = sanitize_filename(payload.file_name)
-    object_key = f"uploads/{event.slug}/{upload_id}/{safe_filename}"
+    file_ext = Path(safe_filename).suffix
+    object_key = f"events/{event.id}/{media_type}s/{upload_id}{file_ext}"
     upload = Upload(
         id=upload_id,
         event_id=event.id,
         guest_session_id=payload.guest_session_id,
         object_key=object_key,
         mime_type=payload.mime_type,
+        media_type=media_type,
         file_size=payload.file_size,
         status="pending",
     )
@@ -117,7 +123,7 @@ async def complete_upload(
     if upload.status == "complete":
         return to_upload_response(upload)
 
-    ensure_complete_upload_allowed(event, guest_session, payload.file_size)
+    ensure_complete_upload_allowed(event, guest_session, upload.media_type, payload.file_size)
 
     upload.status = "complete"
     upload.file_size = payload.file_size
@@ -142,6 +148,7 @@ async def get_gallery(
     current_host: Annotated[Host, Depends(get_current_host)],
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=60),
+    media_type: str | None = Query(default=None, pattern="^(photo|video)$"),
     session: AsyncSession = Depends(get_session),
 ) -> GalleryResponse:
     event = await get_verified_event(session, slug, active_only=False, check_password=False)
@@ -150,14 +157,18 @@ async def get_gallery(
 
     offset = (page - 1) * limit
 
+    where_clauses = [Upload.event_id == event.id, Upload.status == "complete"]
+    if media_type:
+        where_clauses.append(Upload.media_type == media_type)
+
     total_result = await session.execute(
-        select(func.count()).select_from(Upload).where(Upload.event_id == event.id, Upload.status == "complete")
+        select(func.count()).select_from(Upload).where(*where_clauses)
     )
     total = int(total_result.scalar_one())
 
     uploads_result = await session.execute(
         select(Upload)
-        .where(Upload.event_id == event.id, Upload.status == "complete")
+        .where(*where_clauses)
         .order_by(Upload.created_at.desc())
         .offset(offset)
         .limit(limit)

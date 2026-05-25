@@ -74,6 +74,7 @@ class Upload(Base):
     object_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     compressed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(20), server_default="photo", nullable=False)
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

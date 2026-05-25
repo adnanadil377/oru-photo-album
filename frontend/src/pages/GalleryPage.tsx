@@ -37,6 +37,7 @@ export function GalleryPage({ slug }: GalleryPageProps) {
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [eventError, setEventError] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState<"all" | "photo" | "video">("all");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const fetchEvent = useCallback(async () => {
@@ -60,7 +61,7 @@ export function GalleryPage({ slug }: GalleryPageProps) {
     void fetchEvent();
   }, [fetchEvent]);
 
-  const { uploads, loading, error, hasMore, loadMore } = useGallery(slug, undefined, Boolean(event));
+  const { uploads, loading, error, hasMore, loadMore } = useGallery(slug, undefined, mediaFilter, Boolean(event));
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -175,6 +176,30 @@ export function GalleryPage({ slug }: GalleryPageProps) {
           </div>
 
           <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+            <div className="mb-8 flex justify-center gap-2">
+              <Button
+                variant={mediaFilter === "all" ? "default" : "outline"}
+                className={mediaFilter === "all" ? "rounded-full" : "rounded-full text-foreground"}
+                onClick={() => setMediaFilter("all")}
+              >
+                All
+              </Button>
+              <Button
+                variant={mediaFilter === "photo" ? "default" : "outline"}
+                className={mediaFilter === "photo" ? "rounded-full" : "rounded-full text-foreground"}
+                onClick={() => setMediaFilter("photo")}
+              >
+                Photos
+              </Button>
+              <Button
+                variant={mediaFilter === "video" ? "default" : "outline"}
+                className={mediaFilter === "video" ? "rounded-full" : "rounded-full text-foreground"}
+                onClick={() => setMediaFilter("video")}
+              >
+                Videos
+              </Button>
+            </div>
+
             {uploads.length > 0 ? <PhotoGrid uploads={uploads} /> : null}
             {loading && uploads.length === 0 ? <GallerySkeletons /> : null}
             {!loading && uploads.length === 0 && !error ? (

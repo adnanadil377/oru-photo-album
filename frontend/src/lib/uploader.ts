@@ -2,8 +2,9 @@ import { completeUpload, requestUpload, type UploadResponse } from "@/lib/api";
 import { compressImage } from "@/lib/compress";
 import { getGuestSessionId } from "@/lib/session";
 
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/heic", "image/webp"]);
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/heic", "image/webp", "video/mp4", "video/quicktime", "video/webm"]);
+const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024;
 
 export interface UploadOptions {
   slug: string;
@@ -63,19 +64,22 @@ export async function uploadFile(file: File, options: UploadOptions): Promise<Up
     onUploadProgress,
   } = options;
 
+  const isVideo = file.type.startsWith("video/");
+
   if (validate) {
     if (!ALLOWED_TYPES.has(file.type)) {
-      throw new Error("Only JPEG, PNG, HEIC, and WebP files are supported.");
+      throw new Error("Only JPEG, PNG, HEIC, WebP, and common video files are supported.");
     }
-    if (file.size > MAX_FILE_SIZE) {
-      throw new Error("Please upload photos under 20MB.");
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_PHOTO_SIZE;
+    if (file.size > maxSize) {
+      throw new Error(`Please upload photos under 20MB and videos under 500MB.`);
     }
   }
 
   let uploadFile = file;
   let compressed = false;
 
-  if (compress) {
+  if (compress && !isVideo) {
     onStageChange?.("compressing");
     try {
       const compressedFile = await compressImage(file, onCompressProgress);
@@ -88,6 +92,8 @@ export async function uploadFile(file: File, options: UploadOptions): Promise<Up
       // Some browsers cannot decode HEIC for client compression; R2 still receives only a validated image file.
       onCompressProgress?.(100);
     }
+  } else if (isVideo) {
+    onCompressProgress?.(100);
   }
 
   onStageChange?.("requesting");

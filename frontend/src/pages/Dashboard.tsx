@@ -57,8 +57,8 @@ export function Dashboard() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="pb-24">
-        <header className="px-6 pt-10 pb-6">
+      <main className="pb-24 max-w-6xl mx-auto px-6">
+        <header className="pt-10 pb-6">
           <p className="text-xs font-semibold tracking-wider uppercase text-muted">Dashboard</p>
           <h1 className="mt-2 font-serif text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
             Your Events.
@@ -66,7 +66,7 @@ export function Dashboard() {
           <p className="mt-1 text-sm text-muted">Manage and share your event galleries.</p>
         </header>
 
-        <section className="px-6">
+        <section>
           {loading ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }, (_, i) => (

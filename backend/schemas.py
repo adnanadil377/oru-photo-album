@@ -2,12 +2,15 @@ import re
 import uuid
 from datetime import UTC, datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator, EmailStr
 
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9-]{1,60}$")
-ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/heic", "image/webp"}
-MAX_FILE_SIZE = 20 * 1024 * 1024
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/heic", "image/webp", "video/mp4", "video/quicktime", "video/webm"}
+MAX_PHOTO_SIZE = 20 * 1024 * 1024
+MAX_VIDEO_SIZE = 500 * 1024 * 1024
 
 
 def as_aware_utc(value: datetime) -> datetime:
@@ -149,6 +152,7 @@ class UploadResponse(BaseModel):
     object_key: str
     compressed: bool
     mime_type: str
+    media_type: Literal["photo", "video"]
     file_size: int
     created_at: datetime
 
