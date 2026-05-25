@@ -1,12 +1,12 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createEvent, requestUpload, completeUpload, updateEvent, friendlyApiError, type EventResponse } from "@/lib/api";
-import { getGuestSessionId } from "@/lib/session";
+import { createEvent, updateEvent, friendlyApiError, type EventResponse } from "@/lib/api";
+import { uploadFile } from "@/lib/uploader";
 
 function toLocalDateTimeInput(date: Date): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -33,7 +33,8 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
   const defaultExpiry = useMemo(() => toLocalDateTimeInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), []);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
-  const [slugTouched, setSlugTouched] = useState(false);
+  const [randomSuffix, setRandomSuffix] = useState("");
+  const [isCustomSlug, setIsCustomSlug] = useState(false);
   const [expiresAt, setExpiresAt] = useState(defaultExpiry);
   const [uploadLimit, setUploadLimit] = useState("500");
   const [password, setPassword] = useState("");
@@ -44,41 +45,38 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
   const [loading, setLoading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
 
-  async function uploadCover(file: File, eventSlug: string, eventPassword?: string) {
-    const guestSessionId = getGuestSessionId();
-    const requested = await requestUpload(
-      eventSlug,
-      {
-        guest_session_id: guestSessionId,
-        file_name: file.name,
-        mime_type: file.type,
-        file_size: file.size,
-      },
-      eventPassword
-    );
-    
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", requested.signed_url);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error("Upload failed"));
-      };
-      xhr.onerror = () => reject(new Error("Network error"));
-      xhr.send(file);
-    });
+  useEffect(() => {
+    if (open) {
+      setTitle("");
+      setIsCustomSlug(false);
+      const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+      let res = "";
+      for (let i = 0; i < 4; i++) {
+        res += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      setRandomSuffix(res);
+      setSlug(`event-${res}`);
+      setCoverFile(null);
+      setCoverLink("");
+      setPassword("");
+      setStartTime("");
+      setError(null);
+    }
+  }, [open]);
 
-    const completed = await completeUpload(
-      eventSlug,
-      {
-        upload_id: requested.upload_id,
-        guest_session_id: guestSessionId,
-        file_size: file.size,
-        compressed: false,
-      },
-      eventPassword
-    );
+  useEffect(() => {
+    if (!isCustomSlug && randomSuffix) {
+      const base = slugify(title);
+      setSlug(base ? `${base}-${randomSuffix}` : `event-${randomSuffix}`);
+    }
+  }, [title, isCustomSlug, randomSuffix]);
+
+  async function uploadCover(file: File, eventSlug: string, eventPassword?: string) {
+    const completed = await uploadFile(file, {
+      slug: eventSlug,
+      eventPassword,
+      compress: false,
+    });
     
     await updateEvent(eventSlug, { cover_image_url: completed.file_url }, eventPassword);
     return completed.file_url;
@@ -149,31 +147,51 @@ export function CreateEventModal({ open, onOpenChange, onCreated }: CreateEventM
             <Input
               id="title"
               value={title}
-              onChange={(event) => {
-                const nextTitle = event.target.value;
-                setTitle(nextTitle);
-                if (!slugTouched) {
-                  setSlug(slugify(nextTitle));
-                }
-              }}
+              onChange={(event) => setTitle(event.target.value)}
               placeholder="New Year's Eve Party"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slug">Custom link</Label>
-            <Input
-              id="slug"
-              value={slug}
-              onChange={(event) => {
-                setSlugTouched(true);
-                setSlug(slugify(event.target.value));
-              }}
-              placeholder="ava-noor"
-              required
-              pattern="[a-z0-9-]{1,60}"
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="slug">Event link</Label>
+              <label className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isCustomSlug}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsCustomSlug(checked);
+                    if (!checked) {
+                      const base = slugify(title);
+                      setSlug(base ? `${base}-${randomSuffix}` : `event-${randomSuffix}`);
+                    }
+                  }}
+                  className="rounded border-zinc-800 bg-zinc-950 text-primary focus:ring-0 focus:ring-offset-0 h-3 w-3"
+                />
+                Customize link
+              </label>
+            </div>
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-zinc-500 text-sm select-none font-mono">
+                /e/
+              </span>
+              <Input
+                id="slug"
+                value={slug}
+                disabled={!isCustomSlug}
+                onChange={(event) => {
+                  if (isCustomSlug) {
+                    setSlug(slugify(event.target.value));
+                  }
+                }}
+                className="pl-8 font-mono bg-zinc-950/50 disabled:opacity-70 disabled:cursor-not-allowed text-zinc-200"
+                placeholder="ava-noor"
+                required
+                pattern="[a-z0-9-]{1,60}"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

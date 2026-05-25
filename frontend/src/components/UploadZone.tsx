@@ -9,7 +9,7 @@ interface UploadZoneProps {
   disabled?: boolean;
 }
 
-const ACCEPTED_TYPES = "image/jpeg,image/png,image/heic,image/webp";
+const ACCEPTED_TYPES = "image/jpeg,image/png,image/heic,image/webp,video/mp4,video/quicktime,video/webm";
 
 export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -54,7 +54,7 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
       transition={{ duration: 0.2 }}
       role="button"
       tabIndex={disabled ? -1 : 0}
-      aria-label="Drop your photos here or tap to browse"
+      aria-label="Drop your photos & videos here or tap to browse"
       onClick={openFileDialog}
       onKeyDown={handleKeyDown}
       onDragOver={(event) => {
@@ -79,7 +79,7 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
         disabled={disabled}
       />
       <ImagePlus className="h-10 w-10 text-foreground" aria-hidden="true" />
-      <p className="mt-5 font-serif text-3xl font-semibold text-foreground">Drop your photos here</p>
+      <p className="mt-5 font-serif text-3xl font-semibold text-foreground">Drop your photos & videos here</p>
       <p className="mt-2 text-sm text-muted">or tap to browse</p>
     </motion.div>
   );

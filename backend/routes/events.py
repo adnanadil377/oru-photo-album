@@ -1,16 +1,19 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
+from stream_zip import async_stream_zip, ZIP_32
 
 from config import settings
 from database import get_session
-from middleware.rate_limit import limiter
-from models import Event
+from models import Event, Host, Upload
 from schemas import EventCreate, EventResponse, EventUpdate, QRResponse
-from services.limits import ensure_event_active
-from services.security import hash_password, verify_password
+from services.security import hash_password
+from services.auth import get_current_host
+from services.event_guard import get_verified_event
 
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -35,31 +38,15 @@ def to_event_response(event: Event) -> EventResponse:
         current_storage_bytes=event.current_storage_bytes,
         requires_password=event.password_hash is not None,
         event_url=event_url(event.slug),
+        host_id=event.host_id,
     )
 
 
-async def load_event(session: AsyncSession, slug: str, active_only: bool = True) -> Event:
-    result = await session.execute(select(Event).where(Event.slug == slug))
-    event = result.scalar_one_or_none()
-    if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event_not_found")
-    if active_only:
-        ensure_event_active(event)
-    return event
-
-
-def require_event_password(event: Event, password: str | None) -> None:
-    if event.password_hash and not password:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="password_required")
-    if event.password_hash and not verify_password(password or "", event.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="wrong_password")
-
-
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
 async def create_event(
     request: Request,
     payload: EventCreate,
+    current_host: Annotated[Host, Depends(get_current_host)],
     session: AsyncSession = Depends(get_session),
 ) -> EventResponse:
     existing_result = await session.execute(select(Event.id).where(Event.slug == payload.slug))
@@ -74,6 +61,7 @@ async def create_event(
         max_uploads=payload.max_uploads,
         cover_image_url=payload.cover_image_url,
         password_hash=hash_password(payload.password) if payload.password else None,
+        host_id=current_host.id,
     )
     session.add(event)
     await session.commit()
@@ -96,7 +84,6 @@ async def get_events_batch(
     return [to_event_response(event) for event in events]
 
 
-
 @router.get("/{slug}", response_model=EventResponse)
 async def get_event(
     slug: str,
@@ -105,8 +92,7 @@ async def get_event(
     x_event_password: Annotated[str | None, Header(alias="X-Event-Password")] = None,
     session: AsyncSession = Depends(get_session),
 ) -> EventResponse:
-    event = await load_event(session, slug)
-    require_event_password(event, password or x_event_password)
+    event = await get_verified_event(session, slug, password=password or x_event_password)
     return to_event_response(event)
 
 
@@ -115,11 +101,12 @@ async def update_event(
     slug: str,
     payload: EventUpdate,
     request: Request,
-    x_event_password: Annotated[str | None, Header(alias="X-Event-Password")] = None,
+    current_host: Annotated[Host, Depends(get_current_host)],
     session: AsyncSession = Depends(get_session),
 ) -> EventResponse:
-    event = await load_event(session, slug, active_only=False)
-    require_event_password(event, x_event_password)
+    event = await get_verified_event(session, slug, active_only=False, check_password=False)
+    if event.host_id != current_host.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this event")
 
     if payload.expires_at is not None:
         event.expires_at = payload.expires_at
@@ -141,5 +128,59 @@ async def get_event_qr(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> QRResponse:
-    event = await load_event(session, slug, active_only=False)
+    event = await get_verified_event(session, slug, active_only=False, check_password=False)
     return QRResponse(url=event_url(event.slug))
+
+
+@router.get("/{slug}/download-zip")
+async def download_zip(
+    slug: str,
+    request: Request,
+    current_host: Annotated[Host, Depends(get_current_host)],
+    part: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+):
+    event = await get_verified_event(session, slug, active_only=False, check_password=False)
+    if event.host_id != current_host.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this gallery")
+    
+    limit = 500
+    offset = part * limit
+    
+    uploads_result = await session.execute(
+        select(Upload)
+        .where(Upload.event_id == event.id, Upload.status == "complete")
+        .order_by(Upload.created_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    uploads = uploads_result.scalars().all()
+
+    if not uploads:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no_photos_found")
+
+    async def get_files():
+        from services.storage import R2StorageService
+        storage_service = R2StorageService()
+        async with httpx.AsyncClient() as client:
+            for idx, upload in enumerate(uploads):
+                global_idx = offset + idx
+                file_url = storage_service.get_public_url(upload.object_key)
+                raw_filename = upload.object_key.split('/')[-1]
+                filename = f"{global_idx + 1:03d}_{raw_filename}"
+                
+                async def file_stream(url):
+                    async with client.stream('GET', url) as response:
+                        response.raise_for_status()
+                        async for chunk in response.aiter_bytes(chunk_size=65536):
+                            yield chunk
+                            
+                yield filename, upload.created_at, 0o600, ZIP_32, file_stream(file_url)
+
+    zip_filename = f"{event.slug}-part{part+1}.zip" if part > 0 else f"{event.slug}.zip"
+    
+    return StreamingResponse(
+        async_stream_zip(get_files()),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={zip_filename}"}
+    )

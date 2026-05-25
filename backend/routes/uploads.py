@@ -3,41 +3,21 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
-from middleware.rate_limit import limiter
-from models import Event, GuestSession, Upload
+from models import Event, GuestSession, Upload, Host
 from schemas import CompleteUploadRequest, GalleryResponse, UploadRequest, UploadRequestResponse, UploadResponse
-from services.limits import ensure_complete_upload_allowed, ensure_event_active, ensure_request_upload_allowed
-from services.security import verify_password
+from services.limits import ensure_complete_upload_allowed, ensure_request_upload_allowed
+from services.auth import get_current_host
 from services.storage import R2StorageService, sanitize_filename
+from services.event_guard import get_verified_event
 
 
 router = APIRouter(prefix="/events/{slug}", tags=["uploads"])
 storage_service = R2StorageService()
-
-
-async def load_event(
-    session: AsyncSession,
-    slug: str,
-    password: str | None = None,
-    lock: bool = False,
-) -> Event:
-    statement = select(Event).where(Event.slug == slug)
-    if lock:
-        statement = statement.with_for_update()
-    result = await session.execute(statement)
-    event = result.scalar_one_or_none()
-    if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event_not_found")
-    ensure_event_active(event)
-    if event.password_hash and not password:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="password_required")
-    if event.password_hash and not verify_password(password, event.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="wrong_password")
-    return event
 
 
 async def get_or_create_guest_session(session: AsyncSession, event: Event, session_id: str, lock: bool = False) -> GuestSession:
@@ -73,13 +53,13 @@ def to_upload_response(upload: Upload) -> UploadResponse:
         object_key=upload.object_key,
         compressed=upload.compressed,
         mime_type=upload.mime_type,
+        media_type=upload.media_type,
         file_size=upload.file_size,
         created_at=upload.created_at,
     )
 
 
 @router.post("/request-upload", response_model=UploadRequestResponse)
-@limiter.limit("10/minute")
 async def request_upload(
     slug: str,
     payload: UploadRequest,
@@ -89,19 +69,23 @@ async def request_upload(
     session: AsyncSession = Depends(get_session),
 ) -> UploadRequestResponse:
     ensure_header_matches_body(x_session_id, payload.guest_session_id)
-    event = await load_event(session, slug, password=x_event_password)
+    event = await get_verified_event(session, slug, password=x_event_password)
     guest_session = await get_or_create_guest_session(session, event, payload.guest_session_id)
-    ensure_request_upload_allowed(event, guest_session, payload.mime_type, payload.file_size)
+    
+    media_type = "video" if payload.mime_type.startswith("video/") else "photo"
+    ensure_request_upload_allowed(event, guest_session, payload.mime_type, media_type, payload.file_size)
 
     upload_id = uuid.uuid4()
     safe_filename = sanitize_filename(payload.file_name)
-    object_key = f"uploads/{event.slug}/{upload_id}/{safe_filename}"
+    file_ext = Path(safe_filename).suffix
+    object_key = f"events/{event.id}/{media_type}s/{upload_id}{file_ext}"
     upload = Upload(
         id=upload_id,
         event_id=event.id,
         guest_session_id=payload.guest_session_id,
         object_key=object_key,
         mime_type=payload.mime_type,
+        media_type=media_type,
         file_size=payload.file_size,
         status="pending",
     )
@@ -114,7 +98,6 @@ async def request_upload(
 
 
 @router.post("/complete-upload", response_model=UploadResponse)
-@limiter.limit("10/minute")
 async def complete_upload(
     slug: str,
     payload: CompleteUploadRequest,
@@ -124,7 +107,7 @@ async def complete_upload(
     session: AsyncSession = Depends(get_session),
 ) -> UploadResponse:
     ensure_header_matches_body(x_session_id, payload.guest_session_id)
-    event = await load_event(session, slug, password=x_event_password, lock=True)
+    event = await get_verified_event(session, slug, password=x_event_password, lock=True)
     guest_session = await get_or_create_guest_session(session, event, payload.guest_session_id, lock=True)
 
     upload_result = await session.execute(
@@ -140,7 +123,7 @@ async def complete_upload(
     if upload.status == "complete":
         return to_upload_response(upload)
 
-    ensure_complete_upload_allowed(event, guest_session, payload.file_size)
+    ensure_complete_upload_allowed(event, guest_session, upload.media_type, payload.file_size)
 
     upload.status = "complete"
     upload.file_size = payload.file_size
@@ -159,27 +142,33 @@ async def complete_upload(
 
 
 @router.get("/gallery", response_model=GalleryResponse)
-@limiter.limit("30/minute")
 async def get_gallery(
     slug: str,
     request: Request,
+    current_host: Annotated[Host, Depends(get_current_host)],
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=60),
-    password: str | None = None,
-    x_event_password: Annotated[str | None, Header(alias="X-Event-Password")] = None,
+    media_type: str | None = Query(default=None, pattern="^(photo|video)$"),
     session: AsyncSession = Depends(get_session),
 ) -> GalleryResponse:
-    event = await load_event(session, slug, password=password or x_event_password)
+    event = await get_verified_event(session, slug, active_only=False, check_password=False)
+    if event.host_id != current_host.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this gallery")
+
     offset = (page - 1) * limit
 
+    where_clauses = [Upload.event_id == event.id, Upload.status == "complete"]
+    if media_type:
+        where_clauses.append(Upload.media_type == media_type)
+
     total_result = await session.execute(
-        select(func.count()).select_from(Upload).where(Upload.event_id == event.id, Upload.status == "complete")
+        select(func.count()).select_from(Upload).where(*where_clauses)
     )
     total = int(total_result.scalar_one())
 
     uploads_result = await session.execute(
         select(Upload)
-        .where(Upload.event_id == event.id, Upload.status == "complete")
+        .where(*where_clauses)
         .order_by(Upload.created_at.desc())
         .offset(offset)
         .limit(limit)

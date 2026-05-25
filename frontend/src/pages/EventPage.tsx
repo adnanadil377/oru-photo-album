@@ -237,7 +237,6 @@ export function EventPage({ slug }: EventPageProps) {
           <div className="flex flex-col gap-3 max-w-xs mx-auto">
             <Button 
               variant="outline" 
-              size="lg" 
               onClick={() => setShowThankYou(false)} 
               className="w-full text-base rounded-full h-14 bg-white/5 border-white/10 hover:bg-white/10 hover:text-foreground transition-all duration-300"
             >

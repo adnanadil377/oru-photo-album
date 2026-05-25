@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
     environment: str = "development"
 
+    jwt_secret: str
+    jwt_access_expire_minutes: int = 15
+    jwt_refresh_expire_days: int = 30
+    cookie_secure: bool = False
+    cookie_domain: str = "localhost"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
